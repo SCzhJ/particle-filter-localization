@@ -6,10 +6,13 @@ from nav_msgs.srv import GetMap
 from geometry_msgs.msg import Vector3
 from geometry_msgs.msg import PoseArray
 from geometry_msgs.msg import Pose
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from tf.transformations import quaternion_from_euler
 import random
 import numpy as np
 import sensor_model as sensor
+import motion_model as motion
+import copy
 
 class Particles:
     def __init__(self,numOfParticles=50):
@@ -31,11 +34,24 @@ class Particles:
 
         self.sensor_model = sensor.SensorModel()
 
+    def setParticle(self,robotPose,i):
+        self.particleArray[i] = robotPose
+
+    def getParticle(self,i):
+        return self.particleArray[i]
+    
+    def setParticleArray(self,newParticleArray):
+        self.particleArray = newParticleArray
+
+    def getParticleArray(self):
+        return self.particleArray
+
     def ResampleParticles(self):
+        # print("before resampling",self.particleArray)
         new_particles = []
         c = []
         c.append(self.weight[0])
-        print(self.weight)
+        # print(self.weight)
         for i in range(1,self.N):
             c.append(c[i-1]+self.weight[0])
 
@@ -50,18 +66,28 @@ class Particles:
                     i-=1
                     j=self.N
                     break
-            new_particles.append(self.particleArray[i])
+            new_particles.append(copy.copy(self.getParticle(i)))
             u+=1/self.N
             j+=1
         for _ in range(self.N-len(new_particles)):
-            new_particles.append(self.particleArray[self.N-1])
-        self.particleArray = new_particles
+            new_particles.append(copy.copy(self.getParticle(self.N-1)))
+
+        # for i in range(len(new_particles)):
+            # x = copy.copy(new_particles[i][0])
+
+        return new_particles
 
     def UpdateWeight(self):
+            # print("BEFORE update weight")
+            # print(self.particleArray)
             for i in range(self.N):
-                self.weight[i] = self.sensor_model.CorrectionOneParticle(self.particleArray[i])
+                self.weight[i] = self.sensor_model.CorrectionOneParticle(copy.copy(self.getParticle(i)))
+
+            # print("AFTER update weight")
+            # print(self.particleArray)
 
             sum_of_weight = sum(self.weight)
+            # print("sum_of_weight",sum_of_weight)
 
             for i in range(self.N):
                 self.weight[i] = self.weight[i]/sum_of_weight
@@ -133,14 +159,53 @@ class Particles:
         return response.map
 
 # Test Program
+pose = Pose()
+clicked = False
+def Clicked(msg):
+    global pose
+    global clicked
+
+    pose = msg.pose.pose
+    clicked = True
 if __name__=='__main__':
     rospy.init_node("particle_class_p")
-    rate = rospy.Rate(1)
-    Particles = Particles(50)
-    Particles.InitParticles()
 
+    delta_t = 0.05
+    rate = rospy.Rate(1/delta_t)
+
+    particleNum = 50
+    particles = Particles(particleNum)
+    particles.InitParticles()
+
+    motion_model = motion.MotionModel(delta_t)
+    sub = rospy.Subscriber("/initialpose",PoseWithCovarianceStamped,Clicked,queue_size=10)
+
+    counter = 1
     while not rospy.is_shutdown():
-        Particles.PublishParticles()
+        particles.PublishParticles()
+
+        if counter == 100000:
+            counter = 0
+        if counter % 50 == 0:
+            particles.UpdateWeight()
+            # break
+            particles.setParticleArray(particles.ResampleParticles())
+
+        # Motion Update
+        if motion_model.getMoving() == True:
+            for i in range(particleNum):
+                # print("particles.particleArray[0]",parrticles.getParticle(0))
+                particles.setParticle(motion_model.PredictMotion(particles.getParticle(i)),i)
+            counter += 1
+
+        # print(particles.particleArray)
         rate.sleep()
+
+# print(particles.weight)
+# print(sum(particles.weight))
+# print(particles.particleArray)
+# particles.ResampleParticles()
+# print(particles.particleArray)
+
 
 

@@ -42,6 +42,12 @@ class Raycast:
         # raycast location
         self.pubRayOrigin = rospy.Publisher("/rayorigin_pose",PoseStamped,queue_size=10)
 
+    def getRanges(self):
+        return self.scan.ranges
+
+    def getRays(self):
+        return self.rays
+
     def PublishRCandRCtrans(self):
         self.drifter.RepeatedTransform(self.laserSupportFrame,self.raycastFrame)
         self.raycastScan = self.scan
@@ -134,10 +140,11 @@ class Raycast:
                     if self.OccupancyCheck(mapCheck[0],mapCheck[1]):
                         boundFound = True
 
-                angle += self.scan.angle_increment
-
                 # turn ray in cell unit to m
                 self.rays.append(longestRay * self.resolution)
+            angle += self.scan.angle_increment
+
+        return self.rays
 
     def LoadMap(self):
         rospy.wait_for_service('/static_map') 
