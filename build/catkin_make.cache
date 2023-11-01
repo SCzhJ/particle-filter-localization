@@ -1,0 +1,2 @@
+bot_sim
+-DCATKIN_DEVEL_PREFIX=/home/sentry_train_test/AstarTraining/sim_nav/devel -DCMAKE_INSTALL_PREFIX=/home/sentry_train_test/AstarTraining/sim_nav/install -G Unix Makefiles
