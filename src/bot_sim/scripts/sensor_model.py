@@ -14,9 +14,9 @@ class SensorModel:
         prob = 0
         self.rc = rc.Raycast()
 
-        self.interval = 20
+        self.interval = 5
         # standard deviation of our sensor model
-        self.sigma_r = 2.0 
+        self.sigma_r = 3.0 
         self.N = 1
 
     # robotPose: [x,y,theta]

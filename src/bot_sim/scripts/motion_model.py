@@ -15,8 +15,10 @@ class MotionModel:
     def __init__(self,delta_t):
         self.sub = rospy.Subscriber("/cmd_vel",Twist,self.RecordVel,queue_size=10)
         self.vel = [0,0]
-        self.sigma_lin = 0.5
-        self.sigma_ang = 0.5
+        self.sigma_lin = 0.2
+        self.sigma_ang = 0.2
+        self.ang_coef = 0.61
+        self.lin_coef = 0.92
         self.delta_t = delta_t
         self.moving = False
 
@@ -41,7 +43,7 @@ class MotionModel:
     def getMoving(self):
         return self.moving
 
-    def PredictMotion(self,robotPose):
+    def PredictMotion(self,robotPose,lin_err,ang_err):
         '''
         x_new = x + linear_velocity * delta_t * cos(theta)
         y_new = y + linear_velocity * delta_t * sin(theta)
@@ -49,10 +51,17 @@ class MotionModel:
         '''
         pos = robotPose
         v = self.vel
-        pos[0] = pos[0] + (v[0]+np.random.normal(0.0,self.sigma_lin)) * self.delta_t * np.cos(pos[2])
-        pos[1] = pos[1] + (v[0]+np.random.normal(0.0,self.sigma_lin)) * self.delta_t * np.sin(pos[2])
-        # pos[2] = pos[2] + (v[1]+np.random.normal(0.0,self.sigma_ang)) * self.delta_t
-        pos[2] = pos[2] + v[1] * self.delta_t
+        if v[0]!=0:
+            pos[0] = pos[0] + (v[0] * self.lin_coef + lin_err) * self.delta_t * np.cos(pos[2])
+            pos[1] = pos[1] + (v[0] * self.lin_coef + lin_err) * self.delta_t * np.sin(pos[2])
+        else:
+            pos[0] = pos[0] + (v[0] * self.lin_coef) * self.delta_t * np.cos(pos[2])
+            pos[1] = pos[1] + (v[0] * self.lin_coef) * self.delta_t * np.sin(pos[2])
+        if v[1]!=0:
+            pos[2] = pos[2] + (v[1] * self.ang_coef + ang_err) * self.delta_t
+        else:
+            pos[2] = pos[2] + (v[1] * self.ang_coef) * self.delta_t
+
         pos[2] = self.WrapToPosNegPi(pos[2])
 
         return pos
@@ -90,7 +99,7 @@ if __name__=="__main__":
     # drifter.ZeroDrift()
     q_pos = Quaternion()
     while not rospy.is_shutdown():
-        pos = MotionModel.PredictMotion(pos)
+        pos = MotionModel.PredictMotion(pos,0,0)
         qx,qy,qz,qw = quaternion_from_euler(0,0,pos[2])
         motion_model_pose.pose.orientation.x = qx
         motion_model_pose.pose.orientation.y = qy
