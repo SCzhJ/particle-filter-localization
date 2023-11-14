@@ -25,10 +25,10 @@
       <param name="particles" value="30"/>
 
       <!-- The following parameters' original value (signed) is 50-->
-      <param name="xmin" value="-7.0"/>
-      <param name="ymin" value="-7.0"/>
-      <param name="xmax" value="7.0"/>
-      <param name="ymax" value="7.0"/>
+      <param name="xmin" value="-30.0"/>
+      <param name="ymin" value="-30.0"/>
+      <param name="xmax" value="30.0"/>
+      <param name="ymax" value="30.0"/>
       <!-- above modified-->
 
       <param name="delta" value="0.05"/>

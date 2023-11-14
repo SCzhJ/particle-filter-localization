@@ -1,0 +1,6 @@
+<launch>
+    <arg name="map" default="map_11_1_n2.yaml" />
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find bot_sim)/map/$(arg map)"/>
+    <include file="$(find bot_sim)/launch/amcl.launch" />
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find bot_sim)/config/rviz/gazebo_laserbot.rviz" />
+</launch>
