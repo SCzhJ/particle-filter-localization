@@ -10,6 +10,8 @@ import numpy as np
 
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
+import copy
+
 
 if __name__=="__main__":
     rospy.init_node("mcl_p")
@@ -37,6 +39,9 @@ if __name__=="__main__":
     # initialize particles around current pose
     particles.ResampleAllParticlesAroundPose(init_pose)
 
+    resample_lin_sigma = 0.2
+    resample_ang_sigma = 0.05
+
     counter = 1
 
     while not rospy.is_shutdown():
@@ -44,7 +49,7 @@ if __name__=="__main__":
         particles.PublishParticles()
 
         if counter >= 100000:
-            counter = 0
+            counter = 1
 
         if counter % 20 == 0 and motion.getMoving():
             ##########################
@@ -76,15 +81,9 @@ if __name__=="__main__":
                 while u>c:
                     i+=1
                     c+=particles.getWeight(i)/sum_likelihood
-                new_particles.append(particles.getParticle(i))
+                new_particle = particles.ResampleParticleAroundPose(copy.deepcopy(particles.getParticle(i)),resample_lin_sigma,resample_ang_sigma)
+                new_particles.append(new_particle)
                 u+=step
-            # diff = par_num - len(new_particles)
-            # if diff > 0:
-                # for i in range(diff):
-                    # rand_i = np.random.randint(0,par_num-diff)
-                    # new_particles.append(new_particles[rand_i])
-            # elif diff < 0:
-                # rospy.logerr("new_particles more than particle number!")
 
             particles.setParticles(new_particles)
 
@@ -96,13 +95,14 @@ if __name__=="__main__":
             -- motion noise for one particle maintains the same before next resampling
             '''
             # particles.ResampleVelocityNoise()
+            ###################################
 
         # Predict Motion
         '''put new position into particle class'''
-        motion.UpdateVelocity()
+        # motion.UpdateVelocity()
         for i in range(par_num):
-            new_par_pos = motion.PredictMotionJoint(
-                particles.getParticle(i),0.3,0.3)
+            new_par_pos = motion.PredictMotionCmd(
+                particles.getParticle(i))
             particles.setParticle(i,new_par_pos)
 
         counter += 1
