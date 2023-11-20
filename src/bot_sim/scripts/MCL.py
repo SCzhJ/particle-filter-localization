@@ -40,7 +40,7 @@ if __name__=="__main__":
     particles.ResampleAllParticlesAroundPose(init_pose)
 
     resample_lin_sigma = 0.2
-    resample_ang_sigma = 0.05
+    resample_ang_sigma = 0.1
 
     counter = 1
 
@@ -86,16 +86,6 @@ if __name__=="__main__":
                 u+=step
 
             particles.setParticles(new_particles)
-
-            #############################
-            # Velocity Error Resampling #
-            #############################
-            '''
-            Resample all the motion noise 
-            -- motion noise for one particle maintains the same before next resampling
-            '''
-            # particles.ResampleVelocityNoise()
-            ###################################
 
         # Predict Motion
         '''put new position into particle class'''

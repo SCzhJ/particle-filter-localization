@@ -13,29 +13,16 @@ import numpy as np
 
 class MotionModel:
     def __init__(self,delta_t):
-        # self.robot_base_len = 0.2
-        # self.wheel_radius = 0.0325
-        # first_msg = rospy.wait_for_message("/joint_states",JointState)
-        # self.wheel_right_angle = first_msg.position[0]
-        # self.wheel_left_angle = first_msg.position[1]
-
-        # self.wheel_right_prev_angle = self.wheel_right_angle
-        # self.wheel_left_prev_angle = self.wheel_left_angle
-
-        # self.sub_joint = rospy.Subscriber("/joint_states",JointState,self.RecordWheelRotation,queue_size=10)
         self.sub_cmd = rospy.Subscriber("/cmd_vel",Twist,self.RecordVel,queue_size=10)
 
-        # self.v = 0
-        # self.w = 0
         self.sigma_lin = 0.2
         self.sigma_ang = 0.2
-        self.ang_coef = 0.7
+        self.ang_coef = 0.65
         self.lin_coef = 0.92
         self.lin_vel = 0
         self.ang_vel = 0
 
         # self.not_move_threshold = 0.005
-
         self.delta_t = delta_t
         self.moving = False
 
@@ -65,49 +52,12 @@ class MotionModel:
             self.moving = True
         else:
             self.moving = False
-    # def UpdateVelocity(self):
-        # v_right = (self.wheel_right_angle-self.wheel_right_prev_angle)/self.delta_t * self.wheel_radius
-        # self.wheel_right_prev_angle = self.wheel_right_angle
-        # v_left = (self.wheel_left_angle-self.wheel_left_prev_angle)/self.delta_t * self.wheel_radius
-        # self.wheel_left_prev_angle = self.wheel_left_angle
-        # self.v = self.lin_coef * (v_right+v_left)/2
-        # self.w = self.ang_coef * (v_right-v_left)/self.robot_base_len
-        # if self.v < self.not_move_threshold and self.w < self.not_move_threshold:
-            # self.moving = False
-        # else:
-            # self.moving = True
-
-    # # particle as dict() of x, y, theta, and weight 
-    # def PredictMotionJoint(self,particle,lin_sigma=0.01,ang_sigma=0.01):
-        # '''
-        # motion model applied:
-        # x_new = x + linear_velocity * delta_t * cos(theta)
-        # y_new = y + linear_velocity * delta_t * sin(theta)
-        # theta_new = theta + angular_velocity * delta_t
-        # '''
-        # if self.moving:
-            # lin_err = np.random.normal(0,lin_sigma)
-            # ang_err = np.random.normal(0,ang_sigma)
-        # else:
-            # lin_err = 0
-            # ang_err = 0
-        # pos = dict()
-        # pos["x"] = particle["x"] + (self.v + lin_err) * self.delta_t * np.cos(particle["theta"])
-        # pos["y"] = particle["y"] + (self.v + ang_err) * self.delta_t * np.sin(particle["theta"])
-        # pos["theta"] = particle["theta"] + (self.w + ang_err) * self.delta_t
-        # pos["theta"] = self.WrapToPosNegPi(pos["theta"])
-        # pos["weight"] = particle["weight"]
-        # return pos
-
-    # def RecordWheelRotation(self,msg):
-        # self.wheel_right_angle = msg.position[0]
-        # self.wheel_left_angle = msg.position[1]
 
 
 # Test program
 if __name__=="__main__":
     rospy.init_node("motion_model_p")
-    delta_t = 0.02
+    delta_t = 0.05
     rate = rospy.Rate(1/delta_t)
     odom = rospy.wait_for_message("/odom",Odometry)
     pos = dict()
