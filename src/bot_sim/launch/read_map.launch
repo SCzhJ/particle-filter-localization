@@ -1,4 +1,4 @@
 <launch>
-    <arg name="map" default="map_11_14.yaml" />
+    <arg name="map" default="ManyObstaclesMap.yaml" />
     <node name="map_server" pkg="map_server" type="map_server" args="$(find bot_sim)/map/$(arg map)"/>
 </launch>
