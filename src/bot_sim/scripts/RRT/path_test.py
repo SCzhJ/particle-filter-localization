@@ -9,7 +9,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
 
 from RRT import RRT
-from RRT_star import RRT_star
+from RRT_star import RRTStar
 from rrt_util import *
 
 # test program
@@ -29,7 +29,9 @@ if __name__=="__main__":
     rate = rospy.Rate(30)
     clicked_point = rospy.Subscriber("/clicked_point", PointStamped, recordPoint, queue_size=10 )
 
-    rrt = RRT_star()
+    folder_path = "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/RRT/"
+    file_name = "CostMap/CostMapR0d5"
+    rrt = RRTStar(cost_map_path=folder_path+file_name)
 
     pub = rospy.Publisher("tree_marker", Marker, queue_size=10)
     path_pub = rospy.Publisher("path_marker", Marker, queue_size=10)
@@ -54,7 +56,7 @@ if __name__=="__main__":
 
     while not rospy.is_shutdown():
         if plan == True:
-            planned_path, info = rrt.RRT_plan(x_goal,y_goal)
+            planned_path, info = rrt.rrt_plan(x_goal,y_goal)
             print(info)
             if info == "found":
                 path.points = planned_path
