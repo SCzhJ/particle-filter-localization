@@ -232,65 +232,11 @@ class RRTStar:
             rospy.logerr("RRT No Path Found!")
             return None, "not found"
         
-    def rrt_plan_in_one(self, x_goal: float, y_goal: float) -> Tuple[List[Point], str]:
-        """Plan a path using RRT*."""
-        rospy.loginfo("RRT Planning")
-        if self.obstacle_detection(x_goal, y_goal):
-            rospy.logerr("RRT Goal In Obstacle Region!")
-            return None, "Goal in Obstacle"
-        self.init_tree()
-        goal_reached = False
-        counter = 0
-        while counter < self.max_search_iter and (not goal_reached) and (not rospy.is_shutdown()):
-            x, y = self.rand_conf_at_goal_gaussian(x_goal, y_goal)
-            nearest_i = self.nearest_neighbor(x, y)
-            nearest_point = self.tree.get_node(nearest_i).point
-            x_new, y_new = self.step(nearest_i, x, y)
-            if self.collision_free(nearest_point.x, nearest_point.y, x_new, y_new):
-                neighbor_index_list = self.neighbors(x_new, y_new)
-                min_i = nearest_i
-                min_cost = self.path_cost(nearest_i) + self.line_cost(nearest_point.x, nearest_point.y, x_new, y_new)
-                for i in neighbor_index_list:
-                    near_point = self.tree.get_node(i).point
-                    if self.collision_free(near_point.x, near_point.y, x_new, y_new) and \
-                    self.path_cost(i) + self.line_cost(near_point.x, near_point.y, x_new, y_new) < min_cost:
-                        min_i = i
-                        min_cost = self.path_cost(i) + self.line_cost(near_point.x, near_point.y, x_new, y_new)
-
-                new_i = self.tree.add_node(Point(x_new, y_new, 0), min_i)
-                for i in neighbor_index_list:
-                    near_point = self.tree.get_node(i).point
-                    if self.collision_free(x_new, y_new, near_point.x, near_point.y) and \
-                    self.path_cost(new_i) + self.line_cost(near_point.x, near_point.y, x_new, y_new) < self.path_cost(i):
-                        parent_i = self.tree.get_node(i).get_parent_index()
-                        self.tree.get_node(parent_i).delete_children_index(i)
-                        self.tree.get_node(i).modify_parent_index(new_i)
-                        self.tree.get_node(new_i).add_children_index(i)
-                goal_reached = self.goal_reached(x_goal, y_goal, x_new, y_new)
-                counter += 1
-
-        if counter >= self.max_search_iter:
-            rospy.logerr("RRT MAX SEARCH ITERATION REACHED!")
-            return None, "Max Iter"
-        path = []
-        if goal_reached:
-            index = new_i
-            while index != 0:
-                current_node = self.tree.get_node(index)
-                path.append(current_node.point)
-                index = current_node.get_parent_index()
-            current_node = self.tree.get_node(index)
-            path.append(current_node.point)
-            return path[::-1], "found"
-        else:
-            rospy.logerr("RRT No Path Found!")
-            return None, "not found"
-
-    def rrt_plan_selection(self, x_goal: float, y_goal: float) -> Tuple[List[Point], str]:
+    def rrt_plan_selection(self, x_goal: float, y_goal: float, iteration: int=5) -> Tuple[List[Point], str]:
         """Plan a path using RRT* and select the optimal one."""
         min_cost = 10000
         optimal_path = []
-        for _ in range(5):
+        for _ in range(iteration):
             path, info = self.rrt_plan(x_goal, y_goal)
             if info != "found":
                 rospy.logerr("RRT ERROR!")
@@ -326,12 +272,10 @@ if __name__=="__main__":
 
     folder_path = "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/RRT/"
     file_path = "CostMap/CostMapR0d5"
-
     rrt = RRTStar(folder_path+file_path)
 
     pub = rospy.Publisher("tree_marker", Marker, queue_size=10)
     path_pub = rospy.Publisher("path_marker", Marker, queue_size=10)
-
 
     # Marker params
     marker = Marker()
@@ -367,67 +311,36 @@ if __name__=="__main__":
 
     while not rospy.is_shutdown():
         if plan == True:
+            """Plan a path using RRT*."""
+            rospy.loginfo("RRT Planning")
             if rrt.obstacle_detection(x_goal, y_goal):
                 rospy.logerr("RRT Goal In Obstacle Region!")
-            rrt.init_tree()
-            path_marker.points = []
-            path_pub.publish(path_marker)
-            goal_reached = False
-            counter = 0
-            while (not rospy.is_shutdown()) and counter < rrt.max_search_iter and goal_reached == False:
-                x, y = rrt.rand_conf_at_goal_gaussian(x_goal, y_goal)
-                nearest_i = rrt.nearest_neighbor(x,y)
-                nearest_point = rrt.tree.get_node(nearest_i).point
-                x_new, y_new = rrt.step(nearest_i, x, y)
-                if rrt.collision_free(nearest_point.x, nearest_point.y, x_new, y_new):
-                    neighbor_index_list = rrt.neighbors(x_new, y_new)
-                    min_i = nearest_i
-                    min_cost = rrt.path_cost(nearest_i)+rrt.line_cost(nearest_point.x,nearest_point.y,x_new,y_new)
-
-                    for i in neighbor_index_list:
-                        near_point = rrt.tree.get_node(i).point
-                        if rrt.collision_free(near_point.x,near_point.y,x_new,y_new) and \
-                        rrt.path_cost(i)+rrt.line_cost(near_point.x,near_point.y,x_new,y_new)<min_cost:
-                            min_i = i
-                            min_cost = rrt.path_cost(i)+rrt.line_cost(near_point.x,near_point.y,x_new,y_new)
-
-                    new_i = rrt.tree.add_node(Point(x_new, y_new, 0), min_i)
-                    for i in neighbor_index_list:
-                        near_point = rrt.tree.get_node(i).point
-                        if rrt.collision_free(x_new,y_new,near_point.x,near_point.y) and \
-                        rrt.path_cost(new_i)+rrt.line_cost(near_point.x,near_point.y,x_new,y_new)<rrt.path_cost(i):
-                            parent_i = rrt.tree.get_node(i).get_parent_index()
-                            rrt.tree.get_node(parent_i).delete_children_index(i)
-                            rrt.tree.get_node(i).modify_parent_index(new_i)
-                            rrt.tree.get_node(new_i).add_children_index(i)
-                    
+            else:
+                rrt.init_tree()
+                goal_reached = False
+                counter = 0
+                while counter < rrt.max_search_iter and (not goal_reached) and (not rospy.is_shutdown()):
+                    x, y = rrt.rand_conf_at_goal_gaussian(x_goal, y_goal)
+                    nearest_x, nearest_y, nearest_i = rrt.find_nearest(x, y)
+                    x_new, y_new = rrt.step(nearest_i, x, y)
+                    if rrt.collision_free(nearest_x, nearest_y, x_new, y_new):
+                        min_i, neighbor_index_list = rrt.find_min_cost(x_new, y_new, nearest_i, nearest_x, nearest_y)
+                        new_i = rrt.update_tree(x_new, y_new, min_i, neighbor_index_list)
+                        goal_reached = rrt.goal_reached(x_goal, y_goal, x_new, y_new)
+                        counter += 1
                     # Print Tree
                     LineList = rrt.tree.traverse_node_add_to_line_list(0,[])
                     marker.points = LineList
                     pub.publish(marker)
                     rate.sleep()
-
-                    goal_reached = rrt.goal_reached(x_goal, y_goal, x_new, y_new)
-
-                    counter += 1
-                    rate.sleep()
+                if counter >= rrt.max_search_iter:
+                    rospy.logerr("RRT MAX SEARCH ITERATION REACHED!")
+                if goal_reached:
+                    path_marker.points = rrt.build_path(new_i)[::-1]
+                    path_pub.publish(path_marker)
+                else:
+                    rospy.logerr("RRT No Path Found!")
             plan = False
-            if counter >= rrt.max_search_iter:
-                rospy.logerr("RRT MAX SEARCH ITERATION REACHED!")
-            path = []
-            if goal_reached:
-                index = new_i
-                while index!=0:
-                    current_node = rrt.tree.get_node(index)
-                    path.append(current_node.point)
-                    index = current_node.get_parent_index()
-                current_node = rrt.tree.get_node(index)
-                path.append(current_node.point)
-            else:
-                rospy.logerr("RRT No Path Found!")
-            path_marker.points = path
-            path_pub.publish(path_marker)
-            rospy.loginfo("RRT Planning Done!")
         rate.sleep()
         
     rospy.spin()
