@@ -48,10 +48,12 @@ if __name__=="__main__":
 
     while not rospy.is_shutdown():
         if plan == True:
-            planned_path, info = rrt.rrt_plan_selection(x_goal,y_goal,10)
+            planned_path, info = rrt.rrt_plan_selection(Point(0,0,0), Point(x_goal, y_goal, 0.0),10)
             print(info)
             if info == "found":
                 path.points = planned_path
+                for i in range(len(planned_path)):
+                    planned_path[i].z = 0.0
                 path_pub.publish(path)
             plan = False
         rate.sleep()

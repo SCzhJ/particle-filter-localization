@@ -19,7 +19,6 @@ class RRTStar:
         self.normal_sigma = 0.7
         self.normal_enlargement = 15
         self.max_iter = 10000
-        self.q_init = q_init
         self.step_size = 0.5
         self.gamma     = 4
         self.eta       = 0.4 * self.gamma
@@ -29,10 +28,6 @@ class RRTStar:
         self.max_search_iter = 1000
         self.coll_step= 0.1
         self.tree = TreeUtil(q_init)
-    
-    def init_tree(self):
-        """Initialize the tree."""
-        self.tree = TreeUtil(self.q_init)
     
     def set_goal_radius(self, r: float):
         """Set the goal radius."""
@@ -205,13 +200,15 @@ class RRTStar:
         path.append(current_node.point)
         return path[::-1]
 
-    def rrt_plan(self, x_goal: float, y_goal: float) -> Tuple[List[Point], str]:
+    def rrt_plan(self, robot_point: Point, goal_point: Point) -> Tuple[List[Point], str]:
         """Plan a path using RRT*."""
+        self.tree = TreeUtil(robot_point)
+        x_goal = goal_point.x
+        y_goal = goal_point.y
         rospy.loginfo("RRT Planning")
         if self.obstacle_detection(x_goal, y_goal):
             rospy.logerr("RRT Goal In Obstacle Region!")
             return None, "Goal in Obstacle"
-        self.init_tree()
         goal_reached = False
         counter = 0
         while counter < self.max_search_iter and (not goal_reached) and (not rospy.is_shutdown()):
@@ -227,17 +224,17 @@ class RRTStar:
             rospy.logerr("RRT MAX SEARCH ITERATION REACHED!")
             return None, "Max Iter"
         if goal_reached:
-            return self.build_path(new_i)[::-1], "found"
+            return self.build_path(new_i), "found"
         else:
             rospy.logerr("RRT No Path Found!")
             return None, "not found"
         
-    def rrt_plan_selection(self, x_goal: float, y_goal: float, iteration: int=5) -> Tuple[List[Point], str]:
+    def rrt_plan_selection(self, robot_pose: Point, goal_point: Point,iteration: int=5) -> Tuple[List[Point], str]:
         """Plan a path using RRT* and select the optimal one."""
         min_cost = 10000
         optimal_path = []
         for _ in range(iteration):
-            path, info = self.rrt_plan(x_goal, y_goal)
+            path, info = self.rrt_plan(robot_pose, goal_point)
             if info != "found":
                 rospy.logerr("RRT ERROR!")
                 return [], "error!"
@@ -250,6 +247,14 @@ class RRTStar:
             if cost < min_cost:
                 optimal_path = path
                 min_cost = cost
+            for i in range(len(optimal_path)-1):
+                this_point = optimal_path[i]
+                next_point = optimal_path[i+1]
+                dx = next_point.x - this_point.x
+                dy = next_point.y - this_point.y
+                theta = np.arctan2(dy, dx)
+                optimal_path[i].z = theta
+            optimal_path[-1].z = optimal_path[-2].z
         return optimal_path, "found"
 
 # test program
@@ -267,7 +272,7 @@ def recordPoint(msg):
 
 if __name__=="__main__":
     rospy.init_node("RRT_test")
-    rate = rospy.Rate(3000)
+    rate = rospy.Rate(100)
     clicked_point = rospy.Subscriber("/clicked_point", PointStamped, recordPoint, queue_size=10 )
 
     folder_path = "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/RRT/"
@@ -316,9 +321,9 @@ if __name__=="__main__":
             if rrt.obstacle_detection(x_goal, y_goal):
                 rospy.logerr("RRT Goal In Obstacle Region!")
             else:
-                rrt.init_tree()
                 goal_reached = False
                 counter = 0
+                rrt.tree = TreeUtil(Point(0,0,0))
                 while counter < rrt.max_search_iter and (not goal_reached) and (not rospy.is_shutdown()):
                     x, y = rrt.rand_conf_at_goal_gaussian(x_goal, y_goal)
                     nearest_x, nearest_y, nearest_i = rrt.find_nearest(x, y)
