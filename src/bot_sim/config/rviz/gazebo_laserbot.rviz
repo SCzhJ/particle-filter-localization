@@ -18,6 +18,8 @@ Panels:
         - /PoseArray2
         - /Marker1
         - /Marker2
+        - /Path1
+        - /PointStamped1
       Splitter Ratio: 0.5
     Tree Height: 403
   - Class: rviz/Selection
@@ -198,13 +200,13 @@ Visualization Manager:
                   {}
                 front_wheel:
                   {}
+                left_wheel:
+                  {}
+                right_wheel:
+                  {}
                 support:
                   laser:
                     {}
-              left_wheel:
-                {}
-              right_wheel:
-                {}
       Update Interval: 0
       Value: true
     - Alpha: 0.699999988079071
@@ -297,10 +299,10 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: tree_marker
+      Marker Topic: /point_list_marker
       Name: Marker
       Namespaces:
-        marker_tree: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -308,8 +310,43 @@ Visualization Manager:
       Marker Topic: path_marker
       Name: Marker
       Namespaces:
-        marker_path: true
+        {}
       Queue Size: 100
+      Value: true
+    - Alpha: 1
+      Buffer Length: 1
+      Class: rviz/Path
+      Color: 25; 255; 0
+      Enabled: true
+      Head Diameter: 0.30000001192092896
+      Head Length: 0.20000000298023224
+      Length: 0.30000001192092896
+      Line Style: Lines
+      Line Width: 0.029999999329447746
+      Name: Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 255
+      Pose Style: None
+      Queue Size: 10
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.10000000149011612
+      Shaft Length: 0.10000000149011612
+      Topic: /path_topic
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Class: rviz/PointStamped
+      Color: 204; 41; 204
+      Enabled: true
+      History Length: 1
+      Name: PointStamped
+      Queue Size: 10
+      Radius: 0.20000000298023224
+      Topic: /next_point_topic
+      Unreliable: false
       Value: true
   Enabled: true
   Global Options:
@@ -339,7 +376,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 20.005748748779297
+      Distance: 12.645322799682617
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -347,9 +384,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.7635741829872131
-        Y: -4.480602741241455
-        Z: 2.2204861640930176
+        X: 1.8798468112945557
+        Y: -5.641524314880371
+        Z: 1.3749154806137085
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false

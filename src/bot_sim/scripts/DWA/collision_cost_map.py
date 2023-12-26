@@ -55,36 +55,3 @@ class CostMap:
                 if self.grid_map[y * self.grid_info.width + x] != -1 and \
                 self.util.occupancy_check_grid_coord(x, y):
                     self.occ_points.append([x, y])
-
-if __name__=="__main__":
-    rospy.init_node("cost_map_p")
-
-    folder_path = "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/DWA/"
-    file_name = "CostMap/CostMapR0d3"
-    cost_map = CostMap(robot_radius=0.3)
-    cost_map.gen_cost_map()
-    rospy.loginfo("cost map generated")
-    cost_map.store_cost_map(folder_path+file_name)
-    rospy.loginfo("cost map saved")
-
-    with open(folder_path+file_name,'rb') as f:
-        my_cost_map = pickle.load(f)
-
-    rate = rospy.Rate(5)
-
-    pub = rospy.Publisher("/modified_map", OccupancyGrid, queue_size=10)
-
-    util = MapUtil()
-
-    occupancy_grid = OccupancyGrid()
-    occupancy_grid.header.frame_id = "map"
-    occupancy_grid.info = util.get_map_info()
-    occupancy_grid.data = my_cost_map
-
-    rospy.loginfo("enter loop")
-
-    while not rospy.is_shutdown():
-        occupancy_grid.header.stamp = rospy.Time.now()
-        pub.publish(occupancy_grid)
-
-        rate.sleep()
