@@ -6,6 +6,7 @@ from geometry_msgs.msg import Point, PointStamped
 import numpy as np
 from rrt_util import TreeNode, MapUtil, TreeUtil
 from typing import List, Tuple
+from test_util import *
 import pickle
 
 class RRTStar:
@@ -28,6 +29,8 @@ class RRTStar:
         self.max_search_iter = 1000
         self.coll_step= 0.1
         self.tree = TreeUtil(q_init)
+        self.obstacle_enlargement_tolerance_range = 2.0
+        self.robot_position = None
     
     def set_goal_radius(self, r: float):
         """Set the goal radius."""
@@ -68,10 +71,30 @@ class RRTStar:
             rospy.logerr("Sampling iteration reached maximum!")
         return x, y
 
-    def obstacle_detection(self, real_coord_x: float, real_coord_y: float) -> bool:
-        """Detect obstacle inputting real coordinate."""
+    def obstacle_value_detection(self, real_coord_x: float, real_coord_y: float) -> bool:
+        """
+        Detect obstacle inputting real coordinate.
+        if the distance is within certain range, allow stepping over the obstacle
+            enlargement area
+        """
         grid_x, grid_y = self.map_util.act_pos_to_grid_pos(real_coord_x, real_coord_y)
-        return self.map_util.occupancy_check_cost_map_grid_coord(grid_x, grid_y)
+        occ_val = self.map_util.occupancy_value_check_cost_map_grid_coord(grid_x, grid_y)
+        if self.line_cost(self.robot_position.x, self.robot_position.y, real_coord_x, real_coord_y) < self.obstacle_enlargement_tolerance_range:
+            if occ_val > 75:
+                return True
+            else:
+                return False
+        else:
+            if occ_val > 65:
+                return True
+            else:
+                return False
+    def obstacle_detection(self, real_coord_x: float, real_coord_y: float) -> bool:
+        grid_x, grid_y = self.map_util.act_pos_to_grid_pos(real_coord_x, real_coord_y)
+        occ_val = self.map_util.occupancy_value_check_cost_map_grid_coord(grid_x, grid_y)
+        if occ_val == -1 or occ_val > 65:
+            return True
+        return False
 
     def collision_free(self, x: float, y: float, x_d: float, y_d: float) -> bool:
         """Detect if collision exists between points."""
@@ -84,7 +107,7 @@ class RRTStar:
         while length < self.step_size:
             x += x_del
             y += y_del
-            if self.obstacle_detection(x, y):
+            if self.obstacle_value_detection(x, y):
                 return False
             length += self.coll_step * self.step_size
         return True
@@ -203,6 +226,7 @@ class RRTStar:
     def rrt_plan(self, robot_point: Point, goal_point: Point) -> Tuple[List[Point], str]:
         """Plan a path using RRT*."""
         self.tree = TreeUtil(robot_point)
+        self.robot_position = robot_point
         x_goal = goal_point.x
         y_goal = goal_point.y
         rospy.loginfo("RRT Planning")
@@ -219,7 +243,7 @@ class RRTStar:
                 min_i, neighbor_index_list = self.find_min_cost(x_new, y_new, nearest_i, nearest_x, nearest_y)
                 new_i = self.update_tree(x_new, y_new, min_i, neighbor_index_list)
                 goal_reached = self.goal_reached(x_goal, y_goal, x_new, y_new)
-                counter += 1
+            counter += 1
         if counter >= self.max_search_iter:
             rospy.logerr("RRT MAX SEARCH ITERATION REACHED!")
             return None, "Max Iter"
@@ -276,11 +300,12 @@ if __name__=="__main__":
     clicked_point = rospy.Subscriber("/clicked_point", PointStamped, recordPoint, queue_size=10 )
 
     folder_path = "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/RRT/"
-    file_path = "CostMap/CostMapR0d5"
+    file_path = "CostMap/CostMapR05C005"
     rrt = RRTStar(folder_path+file_path)
 
     pub = rospy.Publisher("tree_marker", Marker, queue_size=10)
     path_pub = rospy.Publisher("path_marker", Marker, queue_size=10)
+    odom_subscriber = OdomSubscriber()
 
     # Marker params
     marker = Marker()
@@ -316,15 +341,18 @@ if __name__=="__main__":
 
     while not rospy.is_shutdown():
         if plan == True:
+            x, y, _ = odom_subscriber.get_pose()
             """Plan a path using RRT*."""
             rospy.loginfo("RRT Planning")
+            rrt.robot_position = Point(x,y,0)
             if rrt.obstacle_detection(x_goal, y_goal):
                 rospy.logerr("RRT Goal In Obstacle Region!")
             else:
                 goal_reached = False
                 counter = 0
-                rrt.tree = TreeUtil(Point(0,0,0))
+                rrt.tree = TreeUtil(Point(x,y,0))
                 while counter < rrt.max_search_iter and (not goal_reached) and (not rospy.is_shutdown()):
+                    # rospy.loginfo(counter)
                     x, y = rrt.rand_conf_at_goal_gaussian(x_goal, y_goal)
                     nearest_x, nearest_y, nearest_i = rrt.find_nearest(x, y)
                     x_new, y_new = rrt.step(nearest_i, x, y)
@@ -332,7 +360,7 @@ if __name__=="__main__":
                         min_i, neighbor_index_list = rrt.find_min_cost(x_new, y_new, nearest_i, nearest_x, nearest_y)
                         new_i = rrt.update_tree(x_new, y_new, min_i, neighbor_index_list)
                         goal_reached = rrt.goal_reached(x_goal, y_goal, x_new, y_new)
-                        counter += 1
+                    counter += 1
                     # Print Tree
                     LineList = rrt.tree.traverse_node_add_to_line_list(0,[])
                     marker.points = LineList

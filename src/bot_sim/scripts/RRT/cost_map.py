@@ -18,7 +18,8 @@ class CostMap:
         self.organize_points()
         self.kdt = self.gen_kd_tree()
         self.cost_map = list(self.grid_map)
-        self.robot_radius = robot_radius
+        self.close_to_obstacle= 0.05
+        self.near_to_obstacle = robot_radius
 
     def get_cost_map(self):
         """Return the cost map."""
@@ -33,12 +34,16 @@ class CostMap:
         """Generate the cost map."""
         # the following returns numpy array n*1 of distances 
         dists = self.kdt.query(self.all_points, k=1)[0][:]
-        grid_dist = self.robot_radius / self.util.grid_info.resolution
+        grid_dist = self.near_to_obstacle / self.util.grid_info.resolution
+        close_dist = self.close_to_obstacle / self.util.grid_info.resolution
         for i in range(len(self.all_points)):
             if dists[i][0] < grid_dist:
                 x = self.all_points[i][0]
                 y = self.all_points[i][1]
-                self.cost_map[y * self.grid_info.width + x] = 100
+                if dists[i][0] > close_dist:
+                    self.cost_map[y * self.grid_info.width + x] = 70
+                else:
+                    self.cost_map[y * self.grid_info.width + x] = 90
         rospy.loginfo("cost map shape %s", np.shape(self.cost_map))
 
     def gen_kd_tree(self):
@@ -59,7 +64,7 @@ class CostMap:
 if __name__=="__main__":
     rospy.init_node("cost_map_p")
 
-    file_name = "CostMap/CostMapR0d5"
+    file_name = "CostMap/CostMapR05C005"
     cost_map = CostMap(robot_radius=0.5)
     cost_map.gen_cost_map()
     rospy.loginfo("cost map generated")

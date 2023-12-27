@@ -130,6 +130,17 @@ class MapUtil:
             return True
         occ = self.cost_map[y * self.grid_info.width + x]
         return (occ == -1 or occ > self.occ_threshold)
+    
+    def occupancy_value_check_cost_map_grid_coord(self, x: int, y: int) -> bool:
+        """Check occupancy in cost map inputing grid coordinate."""
+        if x > self.grid_info.width or y > self.grid_info.height or x < 0 or y < 0:
+            rospy.logerr("Invalid grid coordinate")
+            return -1
+        occ = self.cost_map[y * self.grid_info.width + x]
+        if occ == -1:
+            return 100
+        else:
+            return occ
 
     def get_map(self):
         """Return 1D grid map."""

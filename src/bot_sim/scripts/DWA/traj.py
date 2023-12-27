@@ -29,6 +29,15 @@ class Traj:
         self.rot = self.omega * self.delta_t
         self.rotation = np.array([[0], [0], [self.rot]])
         self.current_pose = None
+    
+    def point_reduction(self, num_of_points_retained: int = 10):
+        """
+        Reduce the number of points in the trajectory to a certain number.
+        """
+        if len(self.poses) <= num_of_points_retained:
+            return
+        else:
+            self.poses = self.poses[::len(self.poses)//num_of_points_retained]
 
     # returns: List[np.ndarray[3, 1]]
     def get_traj(self):
@@ -115,6 +124,10 @@ class TrajectoryRollout:
                 self.trajectories[i].steer_and_record_pose(robot_pose)
                 self.wayposes.append(self.trajectories[i].get_traj())
         return self.wayposes
+    
+    def reduce_points(self, num_of_points_retained: int = 10):
+        for i in range(len(self.trajectories)):
+            self.trajectories[i].point_reduction(num_of_points_retained)
 
     def WrapToPosNegPi(self,theta):
         while theta > np.pi:

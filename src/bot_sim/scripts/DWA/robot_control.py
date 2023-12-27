@@ -28,7 +28,6 @@ class RobotControl:
         self.candidate_vels = candidate_vels
         self.iteration_num = iteration_num
         self.traj_roll_out = TrajectoryRollout(candidate_vels, dt, iteration_num+extension_iteration_num)
-        self.traj_roll_out.fill_trajectories(np.array([[0],[0],[0]]))
         self.candidate_traj_points = []
 
         self.path_poses = []
@@ -42,19 +41,20 @@ class RobotControl:
         '''
         path stored as list of points. The last term .z is used to store theta
         '''
-        self.path_poses = path
+        self.path_poses = copy.deepcopy(path)
+        self.path_poses.append(copy.copy(path[-1]))
         self.next_point_index = 0
     
-    def check_next_point_update(self, robot_pose: Point, tolerance: float = 0.1):
+    def check_next_point_update(self, robot_pose: Point):
         '''
         check if the robot has reached the next point in the path
         '''
         next_point = self.path_poses[self.next_point_index]
         cart_dist = np.sqrt((robot_pose.x - next_point.x) ** 2 + (robot_pose.y - next_point.y) ** 2)
         while cart_dist < self.tolerance and self.next_point_index < len(self.path_poses)-1:
+            self.next_point_index += 1
             next_point = self.path_poses[self.next_point_index]
             cart_dist = np.sqrt((robot_pose.x - next_point.x) ** 2 + (robot_pose.y - next_point.y) ** 2)
-            self.next_point_index += 1
         if self.next_point_index == len(self.path_poses)-1:
             return True
         else:
@@ -65,9 +65,6 @@ class RobotControl:
     
     def get_candidate_traj_points(self):
         return self.candidate_traj_points
-    
-    def cost_of_one_traj(self):
-        return self.cost_function.total_cost(self.candidate_traj_points, self.path_poses[self.next_point_index],self.iteration_num)
     
     def cost_of_all_traj(self):
         for i in range(len(self.candidate_traj_points)):
@@ -82,7 +79,7 @@ class RobotControl:
 if __name__=="__main__":
     rospy.init_node("cost_function_p")
 
-    dt = 0.05
+    dt = 0.01
     rate = rospy.Rate(1/dt)
 
     point_list_publisher = PointListPublisher()
@@ -91,33 +88,42 @@ if __name__=="__main__":
     next_point_publisher = PointStampedPublisher('next_point_topic')
     cost_visualizer = CostVisualizer()
     cmd_publisher = CmdVelPublisher()
+    pose_array_publisher = PoseArrayPublisher()
 
     folder_path = "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/"
-    rrt = RRTStar(folder_path + "RRT/CostMap/CostMapR0d5")
+    rrt = RRTStar(folder_path + "RRT/CostMap/CostMapR05C005")
 
     # Generate trajectory points
-    lin_vel = 0.2
-    ang_vel_dif = 0.07
+    ang_vel_b = 0.3
+    ang_vel_dif = 0.2
     ang_vel_spread = 7
 
     traj_vel = []
-    traj_vel.append([0, 0.3])
+
+    lin_vel = 0.5
+    lin_vel_decrement = 0.04
+
+    traj_vel.append([0.05, 0.3])
     for w in range(1,ang_vel_spread):
-        traj_vel.append([lin_vel,  (ang_vel_spread-w)*ang_vel_dif])
+        traj_vel.append([lin_vel-(ang_vel_spread-w)*lin_vel_decrement,  (ang_vel_spread-w)*ang_vel_dif + ang_vel_b])
+
     traj_vel.append([lin_vel, 0])
     for w in range(1,7):
-        traj_vel.append([lin_vel, -w*ang_vel_dif])
-    traj_vel.append([0, -0.3])
+        traj_vel.append([lin_vel-w*lin_vel_decrement, -w*ang_vel_dif - ang_vel_b])
+    traj_vel.append([0.05, -0.3])
+
     print(traj_vel)
 
-    update_interval = 0.1
+    update_interval = 0.02
     iteration_num = 10
-    extension_iteration_num = 20
-    robot_control = RobotControl(folder_path + "DWA/CostMap/CostMapR0d3", 
+    extension_iteration_num = 30
+    robot_control = RobotControl(folder_path + "DWA/CostMap/CostMapA2d5B1d8", 
                                  traj_vel,
                                  update_interval,
                                  iteration_num,
                                  extension_iteration_num)
+    robot_control.traj_roll_out.reduce_points(10)
+    robot_control.traj_roll_out.fill_trajectories(np.array([[0],[0],[0]]))
 
     tf_buffer = tf2_ros.Buffer(rospy.Duration(1200.0)) # tf buffer length
     tf_listener = tf2_ros.TransformListener(tf_buffer)
@@ -136,6 +142,13 @@ if __name__=="__main__":
                 robot_control.set_path(path)
                 path_publisher.calc_path_from_point_list(path)
                 path_publisher.publish_path()
+
+                # publish path as pose array
+                pose_array_publisher.pose_list_reset()
+                for point in path:
+                    pose_array_publisher.calc_point_add_list(point)
+                pose_array_publisher.publish_pose_array()
+
             else:
                 rospy.loginfo("path not found")
         if path_exist == True:
@@ -150,6 +163,8 @@ if __name__=="__main__":
                     cmd_publisher.publish_cmd_vel(0,0)
         if cum_time >= update_interval * iteration_num and path_exist == True:
             cum_time = 0
+
+            # calculate trajectory points and publish
             try:
                 trans = tf_buffer.lookup_transform('odom', 'base_link', rospy.Time.now(), rospy.Duration(1.0))
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
@@ -161,10 +176,14 @@ if __name__=="__main__":
                 for pose in poses:
                     new_points.append(Point(pose[0][0], pose[1][0], 0.0))
             point_list_publisher.publish_point_list(new_points)
+
+            # calculate trajectory cost
             robot_control.cost_of_all_traj()
+            best_traj_i = robot_control.best_traj()
             # cost_visualizer.visualize(robot_control.cost_list)
-            print(robot_control.best_traj())
-            cmd_publisher.publish_cmd_vel(robot_control.candidate_vels[robot_control.best_traj()][0],
-                                          robot_control.candidate_vels[robot_control.best_traj()][1])
+            # rospy.loginfo(best_traj_i)
+            cmd_publisher.publish_cmd_vel(robot_control.candidate_vels[best_traj_i][0],
+                                          robot_control.candidate_vels[best_traj_i][1])
         cum_time += dt
         rate.sleep()
+    cmd_publisher.publish_cmd_vel(0,0)

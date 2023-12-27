@@ -21,16 +21,27 @@ class CostFunction:
 
         # path_following_cost = k_p * (dist) ^ m_p
         # where dist is the distance between the end point of trajectory and the next point in the path
-        self.k_p = 1
-        self.m_p = 1.2
+        self.k_p = 2.0
+        self.m_p = 2
 
         # turn_cost = k_t * |theta| ^ m_t
-        self.k_t = 0.3
+        self.k_t = 0.01
         self.m_t = 0.3
 
         # bearing_cost = k_b * |theta_difference| ^ m_b
-        self.k_b = 0.5
+        self.k_b = 0.6
         self.m_b = 0.3
+
+        # Want to take in account the cost of neighboring trajectories
+    
+    def avg_cost_from_traj(self, start: int, end: int, traj_i: int, cost_list: List[float]) -> float:
+        '''
+        start: int
+        end: int
+        traj_i: int
+        cost_list: List[float]
+        '''
+        return sum(cost_list[start:end]) / abs(end - start)
     
     def total_cost(self, traj_points: List, next_point: Point, iteration_num: int) -> float:
         '''
@@ -39,15 +50,21 @@ class CostFunction:
         '''
         return self.obstacle_cost(traj_points) + \
                self.path_following_cost(traj_points, next_point) + \
-               self.turn_cost(traj_points) #+ \
-               #self.bearing_cost(traj_points, next_point, iteration_num)
+               self.turn_cost(traj_points) + \
+               self.bearing_cost(traj_points, next_point, iteration_num)
+    
+    def constant_cost(self, k):
+        return k
     
     def bearing_cost(self, traj_points: List, next_point: Point, iteration_num: int) -> float:
         '''
         traj_points: list of np.ndarray[3, 1]
         next_point: Point
         '''
-        theta_difference = abs(traj_points[iteration_num-1][2][0] - next_point.z)
+        dx = next_point.x - traj_points[iteration_num-1][0][0]
+        dy = next_point.y - traj_points[iteration_num-1][1][0]
+        angle = np.arctan2(dy, dx)
+        theta_difference = abs(traj_points[iteration_num-1][2][0] - angle)
         return self.k_b * theta_difference ** self.m_b
     
     def obstacle_cost(self, traj_points: List) -> float:
@@ -57,8 +74,9 @@ class CostFunction:
         for i in range(len(traj_points)):
             x, y = self.map_util.act_pos_to_grid_pos(copy.copy(traj_points[i][0][0]), 
                                                      copy.copy(traj_points[i][1][0]))
-            if self.map_util.occupancy_check_cost_map_grid_coord(x, y):
-                return self.k_o * (len(traj_points) - i) ** self.m_o
+            occ_cost = self.map_util.occupancy_check_cost_map_grid_coord(x, y)
+            if occ_cost > 20:
+                return self.k_o * (occ_cost * (len(traj_points) - i)) ** self.m_o
         return 0
     
     def path_following_cost(self, traj_points: List, next_point: Point) -> float:
