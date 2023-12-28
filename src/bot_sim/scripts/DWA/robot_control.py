@@ -21,11 +21,17 @@ if script_path not in sys.path:
 from RRT_star import *
 
 class RobotControl:
-    def __init__(self, cost_map_path: str, dyn_map_name: str, candidate_vels: List[List[float]], dt: float, iteration_num: int, extension_iteration_num: int):
+    def __init__(self, cost_map_path: str, dyn_map_name: str, 
+                 candidate_vels: List[List[float]], dt: float, 
+                 iteration: int, pathfollow_extension_iteration: int, 
+                 obstacle_avoidance_extension_iteration: int):
         # candidate_vels = [[v1, w1], [v2, w2], ...]
         self.candidate_vels = candidate_vels
-        self.iteration_num = iteration_num
-        self.traj_roll_out = TrajectoryRollout(candidate_vels, dt, iteration_num+extension_iteration_num)
+        self.iteration = iteration
+        self.pathfollow_extension_iteration = pathfollow_extension_iteration
+        self.obstacle_avoidance_extension_iteration = obstacle_avoidance_extension_iteration
+        self.traj_roll_out = TrajectoryRollout(candidate_vels, dt, 
+            iteration + pathfollow_extension_iteration + obstacle_avoidance_extension_iteration)
         self.traj_roll_out.fill_trajectories(np.array([[0],[0],[0]]))
 
         self.robot_frame_traj_points = self.traj_roll_out.get_robot_frame_trajectories()
@@ -77,7 +83,12 @@ class RobotControl:
     
     def cost_of_all_traj(self):
         for i in range(len(self.robot_frame_traj_points)):
-            self.cost_list[i] = self.cost_function.total_cost(self.world_frame_traj_points[i],self.robot_frame_traj_points[i], self.path_poses[self.next_point_index], self.iteration_num)
+            self.cost_list[i] = self.cost_function.total_cost(self.world_frame_traj_points[i],
+                                                              self.robot_frame_traj_points[i], 
+                                                              self.path_poses[self.next_point_index], 
+                                                              self.iteration,
+                                                              self.pathfollow_extension_iteration,
+                                                              self.obstacle_avoidance_extension_iteration)
         for i in range(len(self.cost_list)):
             if self.const_cost[i] != 0:
                 self.cost_list[i] = self.const_cost[i]
@@ -130,14 +141,18 @@ if __name__=="__main__":
     print(traj_vel)
 
     update_interval = 0.2
-    iteration_num = 2
-    extension_iteration_num = 8
+
+    iteration = 2
+    pathfollow_extension_iteration = 4
+    obstacle_avoidance_extension_iteration = 8
+
     robot_control = RobotControl(folder_path + "DWA/CostMap/CostMapA2d5B1d8", 
                                  "grid",
                                  traj_vel,
                                  update_interval,
-                                 iteration_num,
-                                 extension_iteration_num)
+                                 iteration,
+                                 pathfollow_extension_iteration,
+                                 obstacle_avoidance_extension_iteration)
     robot_control.set_const_cost(-1, 60)
 
     tf_buffer = tf2_ros.Buffer(rospy.Duration(1200.0)) # tf buffer length
@@ -176,7 +191,7 @@ if __name__=="__main__":
                     rospy.loginfo("goal reached!")
                     path_exist = False
                     cmd_publisher.publish_cmd_vel(0,0)
-        if cum_time >= update_interval * iteration_num and path_exist == True:
+        if cum_time >= update_interval * iteration and path_exist == True:
             cum_time = 0
 
             # calculate trajectory points and publish
