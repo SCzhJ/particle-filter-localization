@@ -302,7 +302,7 @@ Visualization Manager:
       Marker Topic: /point_list_marker
       Name: Marker
       Namespaces:
-        {}
+        points: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -348,6 +348,16 @@ Visualization Manager:
       Topic: /next_point_topic
       Unreliable: false
       Value: true
+    - Alpha: 0.699999988079071
+      Class: rviz/Map
+      Color Scheme: map
+      Draw Behind: false
+      Enabled: true
+      Name: Map
+      Topic: /grid
+      Unreliable: false
+      Use Timestamp: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -376,7 +386,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 12.645322799682617
+      Distance: 11.127883911132812
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -412,5 +422,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1250
-  X: 106
-  Y: 27
+  X: 81
+  Y: 52

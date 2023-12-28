@@ -29,15 +29,6 @@ class Traj:
         self.rot = self.omega * self.delta_t
         self.rotation = np.array([[0], [0], [self.rot]])
         self.current_pose = None
-    
-    def point_reduction(self, num_of_points_retained: int = 10):
-        """
-        Reduce the number of points in the trajectory to a certain number.
-        """
-        if len(self.poses) <= num_of_points_retained:
-            return
-        else:
-            self.poses = self.poses[::len(self.poses)//num_of_points_retained]
 
     # returns: List[np.ndarray[3, 1]]
     def get_traj(self):
@@ -79,10 +70,12 @@ class TrajectoryRollout:
         self.traj_vels = traj_vels
         self.delta_t = delta_t
         self.iteration = iteration
-        self.trajectories = [Traj(x_vel=self.traj_vels[0][0], omega=self.traj_vels[0][1], delta_t=self.delta_t, iteration=self.iteration)]
-        for i in range(1, len(self.traj_vels)):
+        self.trajectories = []
+        for i in range(len(self.traj_vels)):
             self.trajectories.append(Traj(x_vel=self.traj_vels[i][0], omega=self.traj_vels[i][1], delta_t=self.delta_t, iteration=self.iteration))
-        self.wayposes = []
+
+        self.robot_frame_traj = []
+        self.world_frame_traj = []
     
     def get_real_world_points(self, transform):
         '''
@@ -95,8 +88,8 @@ class TrajectoryRollout:
         trans_mat = np.array([[np.cos(yaw), -np.sin(yaw), dx],
                               [np.sin(yaw),  np.cos(yaw), dy],
                               [          0,            0,  1]])
-        point_trajs = []
-        for poses in self.wayposes:
+        self.world_frame_traj = []
+        for poses in self.robot_frame_traj:
             real_points = []
             for pose in poses:
                 homo_point[0][0] = pose[0][0]
@@ -104,30 +97,31 @@ class TrajectoryRollout:
                 new_point = trans_mat @ homo_point
                 new_point [2][0] = self.WrapToPosNegPi(pose[2][0] + yaw)
                 real_points.append(new_point)
-            point_trajs.append(real_points)
-        return point_trajs
+            self.world_frame_traj.append(real_points)
     
     # Returns List[np.ndarray(3,1)]
-    def get_trajectories(self):
+    def get_robot_frame_trajectories(self):
         """
         Return the list of trajectories points, of dimension (n, 3, 1).
         """
-        return self.wayposes
+        return self.robot_frame_traj
+
+    # Returns List[np.ndarray(3,1)]
+    def get_world_frame_trajectories(self):
+        """
+        Return the list of trajectories points, of dimension (n, 3, 1).
+        """
+        return self.world_frame_traj
     
     def fill_trajectories(self, robot_pose) -> List:
-        self.wayposes = []
+        self.robot_frame_traj = []
         for i in range(len(self.traj_vels)):
             if self.traj_vels[i][0] == 0:
                 self.trajectories[i].straight_steer(robot_pose)
-                self.wayposes.append(self.trajectories[i].get_traj())
+                self.robot_frame_traj.append(self.trajectories[i].get_traj())
             else:
                 self.trajectories[i].steer_and_record_pose(robot_pose)
-                self.wayposes.append(self.trajectories[i].get_traj())
-        return self.wayposes
-    
-    def reduce_points(self, num_of_points_retained: int = 10):
-        for i in range(len(self.trajectories)):
-            self.trajectories[i].point_reduction(num_of_points_retained)
+                self.robot_frame_traj.append(self.trajectories[i].get_traj())
 
     def WrapToPosNegPi(self,theta):
         while theta > np.pi:

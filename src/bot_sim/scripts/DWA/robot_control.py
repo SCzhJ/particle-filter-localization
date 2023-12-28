@@ -21,21 +21,29 @@ if script_path not in sys.path:
 from RRT_star import *
 
 class RobotControl:
-    def __init__(self, cost_map_path: str, candidate_vels: List[List[float]], dt: float, iteration_num: int, extension_iteration_num: int):
-        self.cost_function = CostFunction(cost_map_path)
-        self.cost_list = [0 for _ in range(len(candidate_vels))]
+    def __init__(self, cost_map_path: str, dyn_map_name: str, candidate_vels: List[List[float]], dt: float, iteration_num: int, extension_iteration_num: int):
         # candidate_vels = [[v1, w1], [v2, w2], ...]
         self.candidate_vels = candidate_vels
         self.iteration_num = iteration_num
         self.traj_roll_out = TrajectoryRollout(candidate_vels, dt, iteration_num+extension_iteration_num)
-        self.candidate_traj_points = []
+        self.traj_roll_out.fill_trajectories(np.array([[0],[0],[0]]))
+
+        self.robot_frame_traj_points = self.traj_roll_out.get_robot_frame_trajectories()
+        self.world_frame_traj_points = []
+
+        self.cost_function = CostFunction(cost_map_path, dyn_map_name)
+        self.cost_list = [0 for _ in range(len(candidate_vels))]
+        self.const_cost = [0 for _ in range(len(candidate_vels))]
 
         self.path_poses = []
         # Next point is the next point in the path that the robot should reach
         # When robot is sufficiently near the next point, 
         # it should be updated to the next nearest point
         self.next_point_index = 0
-        self.tolerance = 0.3
+        self.tolerance = 0.6
+    
+    def set_const_cost(self, i: int, cost_val: float):
+        self.const_cost[i] = cost_val
     
     def set_path(self, path: List[Point]):
         '''
@@ -60,15 +68,19 @@ class RobotControl:
         else:
             return False
 
-    def calc_traj_points(self, transform):
-        self.candidate_traj_points = self.traj_roll_out.get_real_world_points(transform)
+    def calc_world_traj_points(self, transform):
+        self.traj_roll_out.get_real_world_points(transform)
+        self.world_frame_traj_points = self.traj_roll_out.get_world_frame_trajectories()
     
-    def get_candidate_traj_points(self):
-        return self.candidate_traj_points
+    def get_world_frame_traj_points(self):
+        return self.world_frame_traj_points
     
     def cost_of_all_traj(self):
-        for i in range(len(self.candidate_traj_points)):
-            self.cost_list[i] = self.cost_function.total_cost(self.candidate_traj_points[i], self.path_poses[self.next_point_index], self.iteration_num)
+        for i in range(len(self.robot_frame_traj_points)):
+            self.cost_list[i] = self.cost_function.total_cost(self.world_frame_traj_points[i],self.robot_frame_traj_points[i], self.path_poses[self.next_point_index], self.iteration_num)
+        for i in range(len(self.cost_list)):
+            if self.const_cost[i] != 0:
+                self.cost_list[i] = self.const_cost[i]
     
     def best_traj(self):
         '''
@@ -111,19 +123,22 @@ if __name__=="__main__":
     for w in range(1,7):
         traj_vel.append([lin_vel-w*lin_vel_decrement, -w*ang_vel_dif - ang_vel_b])
     traj_vel.append([0.05, -0.3])
+    
+    # options with constatn costs:
+    traj_vel.append([-0.2, 0])
 
     print(traj_vel)
 
-    update_interval = 0.02
-    iteration_num = 10
-    extension_iteration_num = 30
+    update_interval = 0.2
+    iteration_num = 2
+    extension_iteration_num = 8
     robot_control = RobotControl(folder_path + "DWA/CostMap/CostMapA2d5B1d8", 
+                                 "grid",
                                  traj_vel,
                                  update_interval,
                                  iteration_num,
                                  extension_iteration_num)
-    robot_control.traj_roll_out.reduce_points(10)
-    robot_control.traj_roll_out.fill_trajectories(np.array([[0],[0],[0]]))
+    robot_control.set_const_cost(-1, 60)
 
     tf_buffer = tf2_ros.Buffer(rospy.Duration(1200.0)) # tf buffer length
     tf_listener = tf2_ros.TransformListener(tf_buffer)
@@ -169,8 +184,8 @@ if __name__=="__main__":
                 trans = tf_buffer.lookup_transform('odom', 'base_link', rospy.Time.now(), rospy.Duration(1.0))
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                 pass
-            robot_control.calc_traj_points(trans.transform)
-            real_points = robot_control.get_candidate_traj_points()
+            robot_control.calc_world_traj_points(trans.transform)
+            real_points = robot_control.get_world_frame_traj_points()
             new_points = []
             for poses in real_points:
                 for pose in poses:

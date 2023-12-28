@@ -1,6 +1,6 @@
 <launch>
     <node pkg="bot_sim" type="scan_2_node" name="scan_2_node" output="screen">
-        <param name="obstacle_enlargement" type="int" value="5" />
+        <param name="obstacle_enlargement" type="int" value="8" />
         <param name="MAXN" type="int" value="50" />
     </node>
 </launch>

@@ -51,6 +51,16 @@ class MapUtil:
         occ = self.grid_map[y * self.grid_info.width + x]
         return occ == -1 or occ > self.occ_threshold
 
+    def occupancy_value_check_grid_coord(self, x: int, y: int) -> bool:
+        """Check occupancy inputing grid coordinate."""
+        if x > self.grid_info.width or y > self.grid_info.height or x < 0 or y < 0:
+            return True
+        occ = self.grid_map[y * self.grid_info.width + x]
+        if occ == -1:
+            return 100
+        else:
+            return occ
+
     def occupancy_check_cost_map_grid_coord(self, x: int, y: int) -> bool:
         """Check occupancy in cost map inputing grid coordinate."""
         if x > self.grid_info.width or y > self.grid_info.height or x < 0 or y < 0:
@@ -81,3 +91,12 @@ class MapUtil:
         rospy.loginfo("map loaded")
         self.grid_map = response.map.data
         self.grid_info = response.map.info
+    
+    def subscribe_map(self, map_name: str):
+        """Subscribe to the map."""
+        rospy.Subscriber(map_name, OccupancyGrid, self.map_callback)
+    
+    def map_callback(self, msg: OccupancyGrid):
+        """Map callback."""
+        self.grid_map = msg.data
+        self.grid_info = msg.info
