@@ -6,6 +6,7 @@
     </include>
 
     <node pkg="gazebo_ros" type="spawn_model" name="model" args="-urdf -model mycar -param robot_description" />
+    <!-- <remap from="tf" to="gazebo_tf" /> -->
 
 </launch>
 

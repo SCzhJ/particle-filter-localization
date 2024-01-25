@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(bot_sim)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   urdf
   xacro
   tf2_ros
+  serial
 )
 
 ## System dependencies are found with CMake's conventions
@@ -107,8 +108,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES bot_sim
-#  CATKIN_DEPENDS roscpp rospy std_msgs urdf xacro
+LIBRARIES ${PROJECT_NAME}
+CATKIN_DEPENDS roscpp rospy std_msgs urdf xacro serial
 #  DEPENDS system_lib
 )
 
@@ -137,6 +138,9 @@ include
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(scan_2_node src/scan_2_node.cpp)
+add_executable(imu_2_odom src/imu_2_odom.cpp)
+add_executable(real_robot_transform src/real_robot_transform.cpp)
+add_executable(cmd2ser src/cmd2ser.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -144,14 +148,26 @@ add_executable(scan_2_node src/scan_2_node.cpp)
 ## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
 # set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
 
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(scan_2_node
   ${catkin_LIBRARIES}
 )
+target_link_libraries(imu_2_odom
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(real_robot_transform
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(cmd2ser
+  ${catkin_LIBRARIES}
+)
+
+## Add cmake target dependencies of the executable
+## same as for the library above
+add_dependencies(imu_2_odom ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+add_dependencies(real_robot_transform ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 #############
 ## Install ##

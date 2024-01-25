@@ -302,7 +302,7 @@ Visualization Manager:
       Marker Topic: /point_list_marker
       Name: Marker
       Namespaces:
-        points: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -316,7 +316,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 25; 255; 0
+      Color: 239; 41; 41
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
@@ -402,9 +402,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8297964334487915
+      Pitch: 1.1647961139678955
       Target Frame: <Fixed Frame>
-      Yaw: 4.518581390380859
+      Yaw: 4.438579559326172
     Saved: ~
 Window Geometry:
   Displays:
@@ -422,5 +422,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1250
-  X: 81
-  Y: 52
+  X: 134
+  Y: 162
