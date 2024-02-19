@@ -46,7 +46,7 @@ class RobotControl:
         # When robot is sufficiently near the next point, 
         # it should be updated to the next nearest point
         self.next_point_index = 0
-        self.tolerance = 0.6
+        self.tolerance = 1.5
     
     def set_const_cost(self, i: int, cost_val: float):
         self.const_cost[i] = cost_val
@@ -65,6 +65,8 @@ class RobotControl:
         '''
         next_point = self.path_poses[self.next_point_index]
         cart_dist = np.sqrt((robot_pose.x - next_point.x) ** 2 + (robot_pose.y - next_point.y) ** 2)
+        rospy.loginfo("robot_pose")
+        rospy.loginfo(robot_pose)
         while cart_dist < self.tolerance and self.next_point_index < len(self.path_poses)-1:
             self.next_point_index += 1
             next_point = self.path_poses[self.next_point_index]
@@ -100,43 +102,44 @@ class RobotControl:
         return self.cost_list.index(min(self.cost_list))
 
 if __name__=="__main__":
-    rospy.init_node("cost_function_p")
+    rospy.init_node("robot_control")
+    rospy.loginfo("begin")
 
     dt = 0.01
     rate = rospy.Rate(1/dt)
 
     point_list_publisher = PointListPublisher()
     clicked_point_subscriber = ClickedPointSubscriber()
-    odom_subscriber = OdomSubscriber()
+    odom_subscriber = Base_footprint_pos()
     next_point_publisher = PointStampedPublisher('next_point_topic')
     cost_visualizer = CostVisualizer()
     cmd_publisher = CmdVelPublisher()
     pose_array_publisher = PoseArrayPublisher()
 
     folder_path = "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/"
-    rrt = RRTStar(folder_path + "RRT/CostMap/CostMapR05C005")
+    rrt = RRTStar(folder_path + "DWA/CostMap/ceping0125")
 
     # Generate trajectory points
-    ang_vel_b = 0.3
-    ang_vel_dif = 0.2
+    ang_vel_b = 0.2
+    ang_vel_dif = 0.07
     ang_vel_spread = 7
 
     traj_vel = []
 
-    lin_vel = 0.5
-    lin_vel_decrement = 0.04
+    lin_vel = 0.3
+    lin_vel_decrement = 0.02
 
     traj_vel.append([0.05, 0.3])
     for w in range(1,ang_vel_spread):
         traj_vel.append([lin_vel-(ang_vel_spread-w)*lin_vel_decrement,  (ang_vel_spread-w)*ang_vel_dif + ang_vel_b])
 
     traj_vel.append([lin_vel, 0])
-    for w in range(1,7):
+    for w in range(1,ang_vel_spread):
         traj_vel.append([lin_vel-w*lin_vel_decrement, -w*ang_vel_dif - ang_vel_b])
     traj_vel.append([0.05, -0.3])
     
     # options with constatn costs:
-    traj_vel.append([-0.2, 0])
+    traj_vel.append([-0.1, 0])
 
     print(traj_vel)
 
@@ -144,9 +147,9 @@ if __name__=="__main__":
 
     iteration = 2
     pathfollow_extension_iteration = 4
-    obstacle_avoidance_extension_iteration = 8
+    obstacle_avoidance_extension_iteration = 20
 
-    robot_control = RobotControl(folder_path + "DWA/CostMap/CostMapA2d5B1d8", 
+    robot_control = RobotControl(folder_path + "DWA/CostMap/ceping0125", 
                                  "grid",
                                  traj_vel,
                                  update_interval,
@@ -162,10 +165,15 @@ if __name__=="__main__":
     path_publisher = PathPublisher()
     
     cum_time = 0
+    rospy.loginfo("enter loop")
     while not rospy.is_shutdown():
         if clicked_point_subscriber.get_clicked():
+            rospy.loginfo("clicked")
             clicked_point_subscriber.set_clicked_false()
-            path, mesg = rrt.rrt_plan_selection(odom_subscriber.robot_pose.position, 
+            rospy.loginfo("robot_pose")
+            rospy.loginfo(odom_subscriber.robot_pose)
+            odom_subscriber.get_pose()
+            path, mesg = rrt.rrt_plan_selection(odom_subscriber.robot_pose, 
                                                 clicked_point_subscriber.get_clicked_point())
             if mesg == "found":
                 path_exist = True
@@ -183,7 +191,8 @@ if __name__=="__main__":
                 rospy.loginfo("path not found")
         if path_exist == True:
             if odom_subscriber.robot_pose != None:
-                goal_reached = robot_control.check_next_point_update(odom_subscriber.robot_pose.position)
+                odom_subscriber.get_pose()
+                goal_reached = robot_control.check_next_point_update(odom_subscriber.robot_pose)
                 next_point = robot_control.path_poses[robot_control.next_point_index]
                 next_point.z = 0.0
                 next_point_publisher.publish_point(next_point)
@@ -196,7 +205,8 @@ if __name__=="__main__":
 
             # calculate trajectory points and publish
             try:
-                trans = tf_buffer.lookup_transform('odom', 'base_link', rospy.Time.now(), rospy.Duration(1.0))
+                trans = tf_buffer.lookup_transform(rospy.get_param('~odom'), rospy.get_param('~base_link')
+                                                   , rospy.Time.now(), rospy.Duration(1.0))#写成两个param
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                 pass
             robot_control.calc_world_traj_points(trans.transform)

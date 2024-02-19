@@ -4,64 +4,161 @@ import rospy
 import numpy as np
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
+from test_util import PointListPublisher
 from geometry_msgs.msg import Transform
 from tf.transformations import euler_from_quaternion
 from typing import List
 import copy
+import pickle
 import tf2_ros
 
 '''
 All robot pose represented by three elements are:
     x, y, theta
 '''
+class TrajectoryMode:
+    def __init__(self):
+        self.velocities = []
+        self.velocity_set = False
+    
+    def getVelocities(self):
+        return self.velocities
+    
+    def getVelocitySet(self):
+        return self.velocity_set
+    
+    def clearVelocitySet(self):
+        self.velocity_set = False
+    
+    def ShiftTrajectory(self, linear_vel: float, num_of_traj: int):
+        """
+        Trajectories scattering around the robot, no angular velocity
+        """
+        self.velocities = []
+        theta = 0
+        for _ in range(num_of_traj):
+            self.velocities.append([linear_vel * np.cos(theta), linear_vel * np.sin(theta), 0])
+            theta += np.pi * 2 / num_of_traj
+        self.velocity_set = True
+    
+    def DifferentialDriveTrajectory(self, x_vel: float, omega_increment: float, num_of_traj_one_side: int):
+        """
+        Trajectories of differential drive robot, without y velocity
+        """
+        self.velocities = [[x_vel, 0, 0]]
+        for i in range(num_of_traj_one_side):
+            self.velocities.append([x_vel, 0, omega_increment * (i+1)])
+            self.velocities.append([x_vel, 0, -omega_increment * (i+1)])
+        self.velocity_set = True
 
-class Traj:
-    def __init__(self, x_vel: float = 0.3, omega: float = 0.3, delta_t: float = 0.05, iteration: int = 10):
+class TrajectoryGenerator:
+    def __init__(self, delta_t: float, record_iteration: int, iteration: int):
         """
-        Initialize the Traj object.
+        Given the velocity and angular velocity, generate the trajectory of the robot.
+
+        x_vel: float, velocity in x direction
+        y_vel: float, velocity in y direction
+        omega: float, angular velocity
+        delta_t: float, time step
+        record_iteration: int, record the trajectory point every record_iteration time steps
+        iteration: int, number of points being recorded in single trajectory
+        robot_pose: ndarray[3,1], robot pose [[x],[y],[theta]]
         """
-        self.x_vel = x_vel
-        self.omega = 0.001 if omega == 0.0 else omega
-        self.poses = []
+        self.x_vel = None
+        self.y_vel = None
+        self.omega = None
         self.delta_t = delta_t
+        self.record_iteration = record_iteration
         self.iteration = iteration
-        self.R = self.x_vel / self.omega
-        self.rot = self.omega * self.delta_t
-        self.rotation = np.array([[0], [0], [self.rot]])
-        self.current_pose = None
-
-    # returns: List[np.ndarray[3, 1]]
-    def get_traj(self):
-        return self.poses
+        self.robot_pose = np.zeros((3, 1))
+        self.traj = []
+        self.trajectories = []
     
-    # robot_pose np.ndarray[3, 1]
-    def straight_steer_once(self):
-        self.current_pose[0][0] += self.x_vel * np.cos(self.current_pose[2][0]) * self.delta_t
-        self.current_pose[1][0] += self.x_vel * np.sin(self.current_pose[2][0]) * self.delta_t
-        return copy.deepcopy(self.current_pose)
+    def getTrajectories(self):
+        return self.trajectories
     
-    def straight_steer(self, robot_pose):
-        self.poses = []
-        self.current_pose = copy.deepcopy(robot_pose)
+    def SetVel(self, x_vel: float, y_vel: float, omega: float):
+        self.x_vel = x_vel
+        self.y_vel = y_vel
+        self.omega = omega
+
+    def GenTrajPoint(self):
+        """
+        Generate single trajectory point
+        robot_pose: ndarray[3,1]
+        """
+        for _ in range(self.record_iteration):
+            self.robot_pose[0][0] += self.x_vel * np.cos(self.robot_pose[2][0]) * self.delta_t
+            self.robot_pose[1][0] += self.x_vel * np.sin(self.robot_pose[2][0]) * self.delta_t
+            self.robot_pose[2][0] += self.omega * self.delta_t
+        self.traj.append(copy.deepcopy(self.robot_pose))
+
+    def GenTraj(self):
+        """
+        Generate Trajectory
+        """
+        self.traj = []
+        self.robot_pose = np.zeros((3, 1))
         for _ in range(self.iteration):
-            self.poses.append(self.straight_steer_once())
+            self.GenTrajPoint()
+    
+    def GenTrajectories(self, vel_list: List):
+        """
+        Generate Trajectories
+        """
+        self.trajectories = []
+        for vel in vel_list:
+            self.SetVel(vel[0], vel[1], vel[2])
+            self.GenTraj()
+            self.trajectories.append(copy.deepcopy(self.traj))
 
-    def steer_once_and_record_pose(self, robot_pose, ICC, A):
-        self.current_pose = A @ (robot_pose - ICC) + ICC + self.rotation
-        return self.current_pose
+class TrajectoryManagement:
+    def __init__(self, traj_gen: TrajectoryGenerator, traj_mode: TrajectoryMode):
+        """
+        traj_gen:  initialized TrajectoryGenerator
+        traj_mode: initialized TrajectoryMode
+        """
+        self.traj_gen  = traj_gen
+        self.traj_mode = traj_mode
+        self.trajectories = []
+        self.PointListPublisher = PointListPublisher(marker_id=17, topic_name='traj_points')
+    
+    def GenTrajectories(self):
+        """
+        Return the list of trajectories points, of dimension (n, 3, 1).
+        """
+        if self.traj_mode.getVelocitySet() == False:
+            rospy.logerr("Velocity of TrajectoryMode not set")
+        else:
+            self.traj_gen.GenTrajectories(self.traj_mode.getVelocities())
+            self.trajectories = self.traj_gen.getTrajectories()
+            self.traj_mode.clearVelocitySet()
+    
+    def VisualizeTrajectories(self):
+        """
+        Visualize the trajectories
+        """
+        point_list = []
+        for traj in self.trajectories:
+            for array in traj:
+                point_list.append(Point(array[0][0], array[1][0], 0))
+        self.PointListPublisher.publish_point_list(point_list)
+    
+    def StoreTrajectories(self, path: str):
+        """
+        Store the trajectories
+        """
+        pickle.dump(self.trajectories, open(path, "wb"))
+    
+    def ReadTrajectories(self, path: str):
+        """
+        Read the trajectories
+        """
+        self.trajectories = pickle.load(open(path, "rb"))
 
-    def steer_and_record_pose(self, robot_pose) -> None:
-        ICC = np.array([[robot_pose[0][0] - self.R * np.sin(robot_pose[2][0])],
-                        [robot_pose[1][0] + self.R * np.cos(robot_pose[2][0])],
-                        [0.0]])
-        A = np.array([[np.cos(self.rot), -np.sin(self.rot), 0.0],
-                      [np.sin(self.rot), np.cos(self.rot), 0.0],
-                      [0.0, 0.0, 1.0]])
-        self.poses = []
-        self.current_pose = copy.deepcopy(robot_pose)
-        for _ in range(self.iteration):
-            self.poses.append(self.steer_once_and_record_pose(self.current_pose, ICC, A))
-
+"""
+To be modified: New code should read file storing trajectory points
+"""
 class TrajectoryRollout:
     def __init__(self, traj_vels: List[List[float]], delta_t: float = 0.05, iteration: int = 10):
         """
@@ -70,12 +167,15 @@ class TrajectoryRollout:
         self.traj_vels = traj_vels
         self.delta_t = delta_t
         self.iteration = iteration
-        self.trajectories = []
-        for i in range(len(self.traj_vels)):
-            self.trajectories.append(Traj(x_vel=self.traj_vels[i][0], omega=self.traj_vels[i][1], delta_t=self.delta_t, iteration=self.iteration))
 
         self.robot_frame_traj = []
         self.world_frame_traj = []
+    
+    def ReadTrajectories(self, path: str):
+        """
+        Read the trajectories
+        """
+        self.robot_frame_traj = pickle.load(open(path, "rb"))
     
     def get_real_world_points(self, transform):
         '''
@@ -112,16 +212,6 @@ class TrajectoryRollout:
         Return the list of trajectories points, of dimension (n, 3, 1).
         """
         return self.world_frame_traj
-    
-    def fill_trajectories(self, robot_pose) -> List:
-        self.robot_frame_traj = []
-        for i in range(len(self.traj_vels)):
-            if self.traj_vels[i][0] == 0:
-                self.trajectories[i].straight_steer(robot_pose)
-                self.robot_frame_traj.append(self.trajectories[i].get_traj())
-            else:
-                self.trajectories[i].steer_and_record_pose(robot_pose)
-                self.robot_frame_traj.append(self.trajectories[i].get_traj())
 
     def WrapToPosNegPi(self,theta):
         while theta > np.pi:
@@ -129,3 +219,21 @@ class TrajectoryRollout:
         while theta < -np.pi:
             theta += 2*np.pi
         return theta
+
+
+
+# Test Program
+if __name__ == "__main__":
+    rospy.init_node("trajectory_node")
+    rate = rospy.Rate(10)
+    traj_gen = TrajectoryGenerator(delta_t=0.1, record_iteration=5, iteration=5)
+    traj_mode = TrajectoryMode()
+    traj_mode.DifferentialDriveTrajectory(x_vel=1, omega_increment=0.1, num_of_traj_one_side=2)
+    print(traj_mode.getVelocities())
+    traj_manage = TrajectoryManagement(traj_gen, traj_mode)
+
+    traj_manage.GenTrajectories()
+    print(traj_manage.traj_gen.getTrajectories())
+    while not rospy.is_shutdown():
+        traj_manage.VisualizeTrajectories()
+        rate.sleep()

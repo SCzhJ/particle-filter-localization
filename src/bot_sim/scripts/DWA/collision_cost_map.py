@@ -69,8 +69,7 @@ class CostMap:
         for x in range(self.grid_info.width):
             for y in range(self.grid_info.height):
                 self.all_points.append([x, y])
-                if self.grid_map[y * self.grid_info.width + x] != -1 and \
-                self.util.occupancy_check_grid_coord(x, y):
+                if self.util.occupancy_check_grid_coord(x, y):
                     self.occ_points.append([x, y])
 
 
@@ -83,7 +82,7 @@ if __name__=="__main__":
     rospy.init_node("cost_map_p")
 
     folder_path = "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/DWA/"
-    file_name = "CostMap/CostMapA2d5B1d8"
+    file_name = "CostMap/ceping0125"
     cost_map = CostMap(robot_radius=0.3,a=2.5,b=1.8)
     cost_map.gen_cost_map()
     rospy.loginfo("cost map generated")

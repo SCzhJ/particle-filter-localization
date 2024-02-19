@@ -9,6 +9,8 @@ def GetVel(msg):
     global vel
     vel = msg
     vel.angular.z = -vel.angular.z
+    vel.linear.x  = vel.linear.x
+    vel.linear.y  = vel.linear.y
 
 if __name__=="__main__":
     rospy.init_node("cmd_vel_converter")

@@ -10,7 +10,7 @@ from nav_msgs.msg import Odometry
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from typing import List
-
+import tf2_ros
 class OdomSubscriber:
     def __init__(self):
         self.odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
@@ -30,6 +30,36 @@ class OdomSubscriber:
                                        self.robot_pose.orientation.w])[2]
         return x, y, theta
 
+class Base_footprint_pos:
+    def get_pose(self):
+        # print("sdfadfasfsdfsd")
+        try:
+            trans = self.tfBuffer.lookup_transform(self.target_frame, self.source_frame, rospy.Time())
+            x = trans.transform.translation.x
+            y = trans.transform.translation.y
+            theta = euler_from_quaternion([trans.transform.rotation.x,trans.transform.rotation.y,trans.transform.rotation.z,trans.transform.rotation.w])[2]
+            self.robot_pose=Point(x , y, theta)
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            # rate.sleep()
+            pass
+    # def timer(self):
+    #     rospy.Timer(rospy.Duration(0.05), self.listen_transform)
+    #     rospy.spin()
+    def __init__(self):
+        self.tfBuffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tfBuffer)
+        self.target_frame = rospy.get_param('~fixed_frame')
+        self.source_frame = rospy.get_param('~base_foot_print')
+        self.robot_pose=Point()
+        # print("??????????????????????????????????????????????")
+        # self.timer()
+        # print("_________________________________________________")
+    # def get_pose(self):
+    #     trans = self.tfBuffer.lookup_transform(fixed_frame, base_foot_print, rospy.Time())
+    #     x = trans.transform.translation.x
+    #     y = trans.transform.translation.y
+    #     theta = euler_from_quaternion([trans.transform.rotation.x,trans.transform.rotation.y,trans.transform.rotation.z,trans.transform.rotation.w])[2]
+    #     return Point(x, y, theta)
 class PointListPublisher:
     def __init__(self, marker_id: int = 5, topic_name: str = 'point_list_marker'):
         self.marker_pub = rospy.Publisher(topic_name, Marker, queue_size=10)
