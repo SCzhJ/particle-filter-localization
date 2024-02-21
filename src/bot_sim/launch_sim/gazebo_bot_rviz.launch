@@ -5,7 +5,7 @@
     <param name="base_frame_id" value="base_footprint"/>
     <param name="global_frame_id" value="map"/>
 
-    <node name="drifter" pkg="bot_sim" type="drifter_class.py" />
+    <!-- <node name="drifter" pkg="bot_sim" type="drifter_class.py" /> -->
 
     <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />

@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="bot_sim" type="robot_control.py" name="robot_control" output="screen" >
+    <param name="fixed_frame" value="map"/>
+    <param name="base_foot_print" value="base_footprint"/>
+    <param name="odom" value="map"/>
+    <param name="base_link" value="base_footprint"/>
+  </node>
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find bot_sim)/config/rviz/gazebo_laserbot.rviz" />
+</launch>

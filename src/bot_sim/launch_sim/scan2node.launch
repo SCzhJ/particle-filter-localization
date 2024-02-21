@@ -1,6 +1,11 @@
 <launch>
     <node pkg="bot_sim" type="scan_2_node" name="scan_2_node" output="screen">
-        <param name="obstacle_enlargement" type="int" value="5" />
+        <param name="obstacle_enlargement" type="int" value="25" />
         <param name="MAXN" type="int" value="50" />
+        <param name="threshold" type="int" value="30" />
+        <param name="scan_topic" type="string" value="filtered_scan" />
+        <param name="obstacle_map_topic" type="string" value="grid" />
+        <param name="base_frame" type="string" value="base_footprint" />
+        <param name="laser_frame" type="string" value="laser" />
     </node>
 </launch>

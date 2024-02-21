@@ -12,149 +12,98 @@ import copy
 import pickle
 import tf2_ros
 
+class trajObject:
+    def __init__(self, x_vel, y_vel, omega, cost_type="calculated", proposed_cost=0):
+        # linear velocity in x, y directions and angular velocity
+        self.x_vel = x_vel
+        self.y_vel = y_vel
+        self.omega = omega
+        # trajectory poses, each pose in list is np.array([[x], [y], [theta]])
+        self.traj_poses = []
+        # cost types: 
+        # "calculated": the proposed cost is not used, but the cost is calculated by the trajectory
+        # "constant":   the proposed cost is used, not calculated from trajectory
+        self.cost_type = cost_type
+        self.proposed_cost = proposed_cost
+    def SetTrajPoses(self, traj_poses):
+        self.traj_poses = traj_poses
+
 '''
 All robot pose represented by three elements are:
     x, y, theta
 '''
 class TrajectoryMode:
-    def __init__(self):
-        self.velocities = []
-        self.velocity_set = False
-    
-    def getVelocities(self):
-        return self.velocities
-    
-    def getVelocitySet(self):
-        return self.velocity_set
-    
-    def clearVelocitySet(self):
-        self.velocity_set = False
-    
-    def ShiftTrajectory(self, linear_vel: float, num_of_traj: int):
+    def ShiftTrajectories(self, linear_vel: float, num_of_traj: int) -> List[trajObject]:
         """
         Trajectories scattering around the robot, no angular velocity
         """
-        self.velocities = []
+        trajectories = []
         theta = 0
-        for _ in range(num_of_traj):
-            self.velocities.append([linear_vel * np.cos(theta), linear_vel * np.sin(theta), 0])
+        for i in range(num_of_traj):
+            trajectories.append(trajObject(linear_vel * np.cos(theta), linear_vel * np.sin(theta), 0))
             theta += np.pi * 2 / num_of_traj
         self.velocity_set = True
+        return trajectories
     
-    def DifferentialDriveTrajectory(self, x_vel: float, omega_increment: float, num_of_traj_one_side: int):
+    def DifferentialDriveTrajectory(self, x_vel: float, omega_increment: float, num_of_traj_one_side: int) -> List[trajObject]:
         """
-        Trajectories of differential drive robot, without y velocity
+        Trajectories of differential drive robot, no y velocity
         """
-        self.velocities = [[x_vel, 0, 0]]
+        trajectories = []
+        trajectories.append(trajObject(x_vel, 0, 0))
         for i in range(num_of_traj_one_side):
-            self.velocities.append([x_vel, 0, omega_increment * (i+1)])
-            self.velocities.append([x_vel, 0, -omega_increment * (i+1)])
+            trajectories.append(trajObject(x_vel, 0, omega_increment * (i+1)))
+            trajectories.append(trajObject(x_vel, 0, -omega_increment * (i+1)))
         self.velocity_set = True
+        return trajectories
 
 class TrajectoryGenerator:
     def __init__(self, delta_t: float, record_iteration: int, iteration: int):
         """
         Given the velocity and angular velocity, generate the trajectory of the robot.
 
-        x_vel: float, velocity in x direction
-        y_vel: float, velocity in y direction
-        omega: float, angular velocity
         delta_t: float, time step
         record_iteration: int, record the trajectory point every record_iteration time steps
         iteration: int, number of points being recorded in single trajectory
-        robot_pose: ndarray[3,1], robot pose [[x],[y],[theta]]
         """
-        self.x_vel = None
-        self.y_vel = None
-        self.omega = None
         self.delta_t = delta_t
         self.record_iteration = record_iteration
         self.iteration = iteration
-        self.robot_pose = np.zeros((3, 1))
-        self.traj = []
-        self.trajectories = []
     
-    def getTrajectories(self):
-        return self.trajectories
-    
-    def SetVel(self, x_vel: float, y_vel: float, omega: float):
-        self.x_vel = x_vel
-        self.y_vel = y_vel
-        self.omega = omega
-
-    def GenTrajPoint(self):
-        """
-        Generate single trajectory point
-        robot_pose: ndarray[3,1]
-        """
-        for _ in range(self.record_iteration):
-            self.robot_pose[0][0] += self.x_vel * np.cos(self.robot_pose[2][0]) * self.delta_t
-            self.robot_pose[1][0] += self.x_vel * np.sin(self.robot_pose[2][0]) * self.delta_t
-            self.robot_pose[2][0] += self.omega * self.delta_t
-        self.traj.append(copy.deepcopy(self.robot_pose))
-
-    def GenTraj(self):
-        """
-        Generate Trajectory
-        """
-        self.traj = []
-        self.robot_pose = np.zeros((3, 1))
-        for _ in range(self.iteration):
-            self.GenTrajPoint()
-    
-    def GenTrajectories(self, vel_list: List):
+    def GenTrajectories(self, trajectories: List[trajObject]):
         """
         Generate Trajectories
         """
-        self.trajectories = []
-        for vel in vel_list:
-            self.SetVel(vel[0], vel[1], vel[2])
-            self.GenTraj()
-            self.trajectories.append(copy.deepcopy(self.traj))
+        for i in range(len(trajectories)):
+            robot_pose = np.zeros((3, 1))
+            for j in range(self.iteration):
+                for k in range(self.record_iteration):
+                    robot_pose[0][0] += trajectories[i].x_vel * self.delta_t * np.cos(robot_pose[2][0]) + trajectories[i].y_vel * self.delta_t * (-np.sin(robot_pose[2][0]))
+                    robot_pose[1][0] += trajectories[i].y_vel * self.delta_t * np.cos(robot_pose[2][0]) + trajectories[i].x_vel * self.delta_t *   np.sin(robot_pose[2][0])
+                    robot_pose[2][0] += trajectories[i].omega * self.delta_t
+                trajectories[i].traj_poses.append(copy.deepcopy(robot_pose))
 
 class TrajectoryManagement:
-    def __init__(self, traj_gen: TrajectoryGenerator, traj_mode: TrajectoryMode):
+    def __init__(self, trajectories: List[trajObject]):
         """
         traj_gen:  initialized TrajectoryGenerator
         traj_mode: initialized TrajectoryMode
         """
-        self.traj_gen  = traj_gen
-        self.traj_mode = traj_mode
-        self.trajectories = []
+        self.trajectories = trajectories
         self.PointListPublisher = PointListPublisher(marker_id=17, topic_name='traj_points')
     
-    def GenTrajectories(self):
-        """
-        Return the list of trajectories points, of dimension (n, 3, 1).
-        """
-        if self.traj_mode.getVelocitySet() == False:
-            rospy.logerr("Velocity of TrajectoryMode not set")
-        else:
-            self.traj_gen.GenTrajectories(self.traj_mode.getVelocities())
-            self.trajectories = self.traj_gen.getTrajectories()
-            self.traj_mode.clearVelocitySet()
-    
     def VisualizeTrajectories(self):
-        """
-        Visualize the trajectories
-        """
         point_list = []
         for traj in self.trajectories:
-            for array in traj:
+            for array in traj.traj_poses:
                 point_list.append(Point(array[0][0], array[1][0], 0))
         self.PointListPublisher.publish_point_list(point_list)
     
     def StoreTrajectories(self, path: str):
-        """
-        Store the trajectories
-        """
         pickle.dump(self.trajectories, open(path, "wb"))
     
-    def ReadTrajectories(self, path: str):
-        """
-        Read the trajectories
-        """
-        self.trajectories = pickle.load(open(path, "rb"))
+    def ReadTrajectories(self, path: str) -> List[trajObject]:
+        return pickle.load(open(path, "rb"))
 
 """
 To be modified: New code should read file storing trajectory points
@@ -226,14 +175,17 @@ class TrajectoryRollout:
 if __name__ == "__main__":
     rospy.init_node("trajectory_node")
     rate = rospy.Rate(10)
-    traj_gen = TrajectoryGenerator(delta_t=0.1, record_iteration=5, iteration=5)
     traj_mode = TrajectoryMode()
-    traj_mode.DifferentialDriveTrajectory(x_vel=1, omega_increment=0.1, num_of_traj_one_side=2)
-    print(traj_mode.getVelocities())
-    traj_manage = TrajectoryManagement(traj_gen, traj_mode)
 
-    traj_manage.GenTrajectories()
-    print(traj_manage.traj_gen.getTrajectories())
-    while not rospy.is_shutdown():
-        traj_manage.VisualizeTrajectories()
-        rate.sleep()
+    trajectories = traj_mode.DifferentialDriveTrajectory(x_vel=1, omega_increment=0.1, num_of_traj_one_side=2)
+    traj_gen = TrajectoryGenerator(delta_t=0.1, record_iteration=5, iteration=5)
+    traj_gen.GenTrajectories(trajectories)
+
+
+    # traj_manage = TrajectoryManagement(traj_gen, traj_mode)
+
+    # traj_manage.GenTrajectories()
+    # print(traj_manage.traj_gen.getTrajectories())
+    # while not rospy.is_shutdown():
+    #     traj_manage.VisualizeTrajectories()
+    #     rate.sleep()

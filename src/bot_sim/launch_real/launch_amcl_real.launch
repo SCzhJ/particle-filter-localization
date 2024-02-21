@@ -1,7 +1,7 @@
 <launch>
-    <arg name="map" default="ManyObstaclesMap.yaml" />
+    <arg name="map" default="ceping0125.yaml" />
     <node name="map_server" pkg="map_server" type="map_server" args="$(find bot_sim)/map/$(arg map)"/>
-    <include file="$(find bot_sim)/launch/amcl_real.launch" />
+    <include file="$(find bot_sim)/launch_real/amcl_real.launch" />
     <node pkg="rviz" type="rviz" name="rviz" />
 
 </launch>

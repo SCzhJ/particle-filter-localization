@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   urdf
   xacro
   tf2_ros
+  tf
   serial
 )
 

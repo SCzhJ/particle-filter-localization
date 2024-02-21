@@ -13,7 +13,7 @@ int main(int argc, char** argv){
     transformStamped1.child_frame_id = "base_footprint";
     transformStamped1.transform.translation.x = 0.0;
     transformStamped1.transform.translation.y = -0.234;
-    transformStamped1.transform.translation.z = -0.4;
+    transformStamped1.transform.translation.z = 0.0;
     transformStamped1.transform.rotation.x = 0;
     transformStamped1.transform.rotation.y = 0;
     transformStamped1.transform.rotation.z = sqrt(2)/2;
@@ -24,7 +24,7 @@ int main(int argc, char** argv){
     transformStamped2.child_frame_id = "laser";
     transformStamped2.transform.translation.x = 0.234;
     transformStamped2.transform.translation.y = 0.0;
-    transformStamped2.transform.translation.z = 0.3;
+    transformStamped2.transform.translation.z = 0.0;
     transformStamped2.transform.rotation.x = 0;
     transformStamped2.transform.rotation.y = 0;
     transformStamped2.transform.rotation.z = 1;
