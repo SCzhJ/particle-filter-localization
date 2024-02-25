@@ -7,7 +7,8 @@ from dwa_util import *
 
 
 class CostFunction:
-    def __init__(self, cost_map_path: str, dynamic_map_name: str):
+    def __init__(self, cost_map_path: str, dynamic_map_name: str,
+                 iteration: int, pathfollow_iter: int, obstacle_iter: int):
         # static obstacle map
         self.stat_obs_map_util = MapUtil()
         self.stat_obs_map_util.load_cost_map(cost_map_path)
@@ -15,6 +16,11 @@ class CostFunction:
         # dynamic obstacle map
         self.dyn_obs_map_util = MapUtil()
         self.dyn_obs_map_util.subscribe_map(dynamic_map_name)
+
+        # iterations
+        self.iteration = iteration
+        self.pathfollow_iter = pathfollow_iter
+        self.obstacle_iter = obstacle_iter
 
         # Naive Cost Function:
         # total_cost = dynamic_obstacle_cost + static_obstacle_cost + path_following_cost + turn_cost + bearing_cost
@@ -54,19 +60,17 @@ class CostFunction:
         return sum(cost_list[start:end]) / abs(end - start)
     
     def total_cost(self, world_frame_traj_points: List, 
-                   robot_frame_traj_points, next_point: Point, 
-                   iteration: int,
-                   pathfollow_iter: int,
-                   obstacle_iter: int) -> float:
+                   robot_frame_traj_points, next_point: Point,
+                   curr_x: float, curr_y: float) -> float:
         '''
         traj_points: list of np.ndarray[3, 1]
         next_point: Point
         '''
-        return self.dynamic_obstacle_cost(robot_frame_traj_points, iteration+pathfollow_iter+obstacle_iter) + \
-               self.static_obstacle_cost(world_frame_traj_points,iteration+pathfollow_iter+obstacle_iter) + \
-               self.path_following_cost(world_frame_traj_points, next_point,iteration+pathfollow_iter) + \
-               self.turn_cost(world_frame_traj_points,iteration) + \
-               self.bearing_cost(world_frame_traj_points, next_point, iteration)
+        return self.dynamic_obstacle_cost(robot_frame_traj_points, self.obstacle_iter) + \
+               self.static_obstacle_cost(world_frame_traj_points,self.obstacle_iter) + \
+               self.path_following_cost(curr_x, curr_y, world_frame_traj_points, next_point,self.pathfollow_iter) + \
+               self.turn_cost(world_frame_traj_points,self.iteration) + \
+               self.bearing_cost(world_frame_traj_points, next_point, self.iteration)
     
     def constant_cost(self, k):
         return k
@@ -103,7 +107,7 @@ class CostFunction:
                 return self.k_o * (occ_cost/100 * (len(traj_points) - i)) ** self.m_o
         return 0
     
-    def path_following_cost(self, traj_points: List, next_point: Point, path_follow_iter: int) -> float:
+    def path_following_cost(self, curr_x: float, curr_y: float, traj_points: List, next_point: Point, path_follow_iter: int) -> float:
         '''
         traj_points: list of np.ndarray[3, 1]
         next_point: Point

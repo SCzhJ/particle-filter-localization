@@ -9,7 +9,7 @@ from typing import List, Tuple
 from test_util import *
 import pickle
 
-class RRTStar:
+class RRT_Star:
     def __init__(self, cost_map_path: str, q_init: Point = Point(0,0,0)):
         """Initialize the RRTStar class."""
         self.map_util = MapUtil(cost_map_file=cost_map_path)
@@ -261,16 +261,21 @@ class RRTStar:
             path, info = self.rrt_plan(robot_pose, goal_point)
             if info != "found":
                 rospy.logerr("RRT ERROR!")
-                return [], "error!"
-            cost = 0
-            prev = path[0]
-            for i in range(1, len(path)):
-                curr = path[i]
-                cost += self.line_cost(prev.x, prev.y, curr.x, curr.y)
-                prev = curr
-            if cost < min_cost:
-                optimal_path = path
-                min_cost = cost
+            else:
+                cost = 0
+                prev = path[0]
+                for i in range(1, len(path)):
+                    curr = path[i]
+                    cost += self.line_cost(prev.x, prev.y, curr.x, curr.y)
+                    prev = curr
+                if cost < min_cost:
+                    optimal_path = path
+                    min_cost = cost
+
+        if info != "found":
+            rospy.logerr("RRT ERROR!")
+            return [], "error!"
+        else:
             for i in range(len(optimal_path)-1):
                 this_point = optimal_path[i]
                 next_point = optimal_path[i+1]
@@ -279,7 +284,7 @@ class RRTStar:
                 theta = np.arctan2(dy, dx)
                 optimal_path[i].z = theta
             optimal_path[-1].z = optimal_path[-2].z
-        return optimal_path, "found"
+            return optimal_path, "found"
 
 # test program
 

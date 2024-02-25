@@ -3,7 +3,7 @@
 import rospy
 from visualization_msgs.msg import Marker
 from tf.transformations import euler_from_quaternion
-from geometry_msgs.msg import PoseStamped, PointStamped, Twist, PoseArray, Pose, Point
+from geometry_msgs.msg import PoseStamped, PointStamped, Twist, PoseArray, Pose, Point, PoseWithCovarianceStamped, Transform
 from nav_msgs.msg import Path
 from tf.transformations import quaternion_from_euler
 from nav_msgs.msg import Odometry
@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from typing import List
 import tf2_ros
+
 class OdomSubscriber:
     def __init__(self):
         self.odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
@@ -61,10 +62,10 @@ class Base_footprint_pos:
     #     theta = euler_from_quaternion([trans.transform.rotation.x,trans.transform.rotation.y,trans.transform.rotation.z,trans.transform.rotation.w])[2]
     #     return Point(x, y, theta)
 class PointListPublisher:
-    def __init__(self, marker_id: int = 5, topic_name: str = 'point_list_marker'):
+    def __init__(self, marker_id: int = 5, frame_id: str = "base_footprint", topic_name: str = 'point_list_marker'):
         self.marker_pub = rospy.Publisher(topic_name, Marker, queue_size=10)
         self.marker = Marker()
-        self.marker.header.frame_id = "map"
+        self.marker.header.frame_id = frame_id
         self.marker.header.stamp = rospy.Time.now()
         self.marker.ns = "points"
         self.marker.id = marker_id
@@ -110,7 +111,6 @@ class PathPublisher:
     def publish_path(self):
         self.path_msg.header.stamp = rospy.Time.now()
         self.path_pub.publish(self.path_msg)
-        rospy.loginfo("path found and published")
 
 class ClickedPointSubscriber:
     def __init__(self):
@@ -210,3 +210,21 @@ class PoseArrayPublisher:
         self.pose_list.append(pose)
 
     
+class InitialposeSubscriber:
+    def __init__(self):
+        self.initialpose_sub = rospy.Subscriber('/initialpose', PoseWithCovarianceStamped, self.initialpose_callback)
+        self.initialpose = None
+
+    def initialpose_callback(self, msg):
+        self.initialpose = msg.pose.pose
+
+    def get_pose_transform(self):
+        tras = Transform()
+        tras.translation.x = self.initialpose.position.x
+        tras.translation.y = self.initialpose.position.y
+        tras.translation.z = self.initialpose.position.z
+        tras.rotation.x = self.initialpose.orientation.x
+        tras.rotation.y = self.initialpose.orientation.y
+        tras.rotation.z = self.initialpose.orientation.z
+        tras.rotation.w = self.initialpose.orientation.w
+        return tras
