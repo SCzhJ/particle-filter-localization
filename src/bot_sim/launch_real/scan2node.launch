@@ -6,6 +6,6 @@
         <param name="scan_topic" type="string" value="filtered_scan" />
         <param name="obstacle_map_topic" type="string" value="grid" />
         <param name="base_frame" type="string" value="base_footprint" />
-        <param name="laser_frame" type="string" value="laser" />
+        <param name="laser_frame" type="string" value="laser_lrf_link" />
     </node>
 </launch>

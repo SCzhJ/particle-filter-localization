@@ -33,7 +33,7 @@ class NavCtrl:
     def __init__(self, trajectories: List[trajObject], cost_map_path: str, dyn_map_name: str,
                  dt: float, traj_cut_percentage: float = 0.5, iter_percentage: float = 0.5,
                  pathfollowext_percentage: float = 0.8, cmd_vel_topic: str = "/cmd_vel",
-                 within_point: float = 1.5, within_goal: float = 0.5):
+                 within_point: float = 1.5, within_goal: float = 0.5, cost_method: str = "omni"):
 
         self.trajectories = trajectories
         # Cut trajectory points to only keep remote points
@@ -49,6 +49,10 @@ class NavCtrl:
         obsext_iter = len(trajectories[0].traj_poses) - path_iter - pathfollowext_iter
 
         self.cost_func = CostFunction(cost_map_path, dyn_map_name,path_iter, pathfollowext_iter, obsext_iter)
+        if cost_method == "omni":
+            self.cost = self.cost_func.total_cost_omni
+        else:
+            self.cost = self.cost_func.total_cost
 
         # transform as robot location
         self.loc_trans = None
@@ -99,7 +103,8 @@ class NavCtrl:
     def get_next_point(self, curr_x: float, curr_y: float, goal_x: float, goal_y: float):
         if self.next_point_index < self.path_len:
             next_point = self.path[self.next_point_index]
-            if abs(next_point.x - curr_x) < self.within_point and abs(next_point.y - curr_y) < self.within_point:
+            if abs(next_point.x - curr_x) < self.within_point \
+                and abs(next_point.y - curr_y) < self.within_point:
                 self.next_point_index += 1
                 return self.get_next_point(curr_x, curr_y, goal_x, goal_y)
             else:
@@ -116,10 +121,10 @@ class NavCtrl:
     def check_best_traj_vel(self, next_point: Point):
         min_cost = float('inf')
         best_traj = None
+        scaler = np.sqrt((next_point.x - self.loc_tran.transform.translation.x)**2 + \
+                         (next_point.y - self.loc_tran.transform.translation.y)**2)
         for traj in self.trajectories:
-            cost = self.cost_func.total_cost(traj.world_frame_traj_poses, traj.traj_poses, next_point,
-                                             self.loc_tran.transform.translation.x,
-                                             self.loc_tran.transform.translation.y)
+            cost = self.cost(traj.world_frame_traj_poses, traj.traj_poses, next_point, scaler)
             if cost < min_cost:
                 min_cost = cost
                 best_traj = traj
@@ -131,7 +136,8 @@ class NavCtrl:
         if self.loc_tran == None:
             rospy.logerr("No location found")
             return -1
-        path_get = self.call_rrt_star(self.loc_tran.transform.translation.x, self.loc_tran.transform.translation.y, goal_x, goal_y)
+        path_get = self.call_rrt_star(self.loc_tran.transform.translation.x, 
+                                      self.loc_tran.transform.translation.y, goal_x, goal_y)
         if path_get != 1:
             rospy.logerr("path not found")
             return -1
@@ -145,8 +151,12 @@ class NavCtrl:
 
             rate = rospy.Rate(1/self.dt)
             vel = Twist()
-            while not self.check_goal_reached(self.loc_tran.transform.translation.x, self.loc_tran.transform.translation.y, goal_x, goal_y) and not rospy.is_shutdown():
-                next_point = self.get_next_point(self.loc_tran.transform.translation.x, self.loc_tran.transform.translation.y, goal_x, goal_y)
+            while not self.check_goal_reached(self.loc_tran.transform.translation.x, 
+                                              self.loc_tran.transform.translation.y, goal_x, goal_y) and \
+                                                not rospy.is_shutdown():
+                next_point = self.get_next_point(self.loc_tran.transform.translation.x, 
+                                                 self.loc_tran.transform.translation.y, 
+                                                 goal_x, goal_y)
                 pub_point = next_point
                 pub_point.z = 0
                 next_point_publisher.publish_point(pub_point)
@@ -180,11 +190,12 @@ if __name__=="__main__":
     rospy.init_node('nav_ctrl')
 
     dt = 0.2
-    trajectories = TrajectoryMode.DifferentialDriveTrajectory(x_vel=0.5, omega_increment=0.1, num_of_traj_one_side=7) + \
-        TrajectoryMode.DifferentialDriveTrajectory(x_vel=-0.5, omega_increment=0.1, num_of_traj_one_side=7)
+    # trajectories = TrajectoryMode.DifferentialDriveTrajectory(x_vel=0.5, omega_increment=0.1, num_of_traj_one_side=7) + \
+    #     TrajectoryMode.DifferentialDriveTrajectory(x_vel=-0.5, omega_increment=0.1, num_of_traj_one_side=7)
+    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=15)
 
     for traj in trajectories:
-        TrajectoryMode.GenTrajectory(traj, dt, record_every_iter=5, iteration=15)
+        TrajectoryMode.GenTrajectory(traj, dt, record_every_iter=3, iteration=5)
     
     cost_map_path = rospy.get_param("~cost_map_path")
     dyn_map_name = rospy.get_param("~dyn_map_name")    

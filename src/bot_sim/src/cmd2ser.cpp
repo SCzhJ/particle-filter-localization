@@ -13,10 +13,11 @@ union FloatToByte{
 
 void cmdVelCallback(const geometry_msgs::Twist::ConstPtr &msg)
 {
+	ROS_INFO_STREAM("Serial Port initialized");
     uint8_t buffer[13];
 
     // Start of Frame
-    buffer[0] = 0xA3; // SOF
+    buffer[0] = 0x4A; // SOF
 
     // Linear velocities x
     FloatToByte linear_x;
@@ -40,12 +41,12 @@ void cmdVelCallback(const geometry_msgs::Twist::ConstPtr &msg)
         ROS_ERROR("Failed to write all bytes to the serial port");
     }
 
-    // // Logging buffer content for debug
-    // std::stringstream ss;
-    // for(int i=0;i<13;i++){
-    //     ss << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buffer[i]) << " ";
-    // }
-    // ROS_INFO_STREAM("Buffer content: " << ss.str());
+	 // Logging buffer content for debug
+	 std::stringstream ss;
+	 for(int i=0;i<13;i++){
+		 ss << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buffer[i]) << " ";
+	 }
+	 ROS_INFO_STREAM("Buffer content: " << ss.str());
 
 }
 
@@ -74,11 +75,11 @@ int main(int argc, char **argv)
     try{
 	    // Configuration
     	ser.setPort(base_serial_port);
-    	ser.setBaudrate(9600);
+    	ser.setBaudrate(115200);
     	serial::Timeout to = serial::Timeout::simpleTimeout(1000);
     	ser.setTimeout(to);
 		ser.setBytesize(serial::eightbits);
-		ser.setStopbits(serial::stopbits_one);
+		//ser.setStopbits(serial::stopbits_one);
     	ser.setParity(serial::parity_none);
 		ser.setFlowcontrol(serial::flowcontrol_none);
 
@@ -98,6 +99,7 @@ int main(int argc, char **argv)
     }
 
     ros::Subscriber sub = nh.subscribe(vel_topic, 1000, cmdVelCallback);
+	ROS_INFO_STREAM("Serial Port initialized");
 
     ros::spin();
 
