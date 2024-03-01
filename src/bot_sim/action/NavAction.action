@@ -1,0 +1,9 @@
+# goal value
+float32 goal_x
+float32 goal_y
+---
+# result value
+int32 result
+---
+# continuous feedback
+float32 progress_bar

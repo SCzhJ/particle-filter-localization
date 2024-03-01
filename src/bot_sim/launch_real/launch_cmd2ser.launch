@@ -1,6 +1,0 @@
-<launch>
-    <node name="cmd2ser" pkg="bot_sim" type="cmd2ser" output="screen">
-        <param name="base_serial_port" type="string" value="/dev/ttyACM0" />
-        <param name="vel_topic" type="string" value="/velocity" />
-    </node>
-</launch>

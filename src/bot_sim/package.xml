@@ -50,6 +50,8 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <depend>roscpp</depend>
   <depend>serial</depend>
+  <depend>actionlib</depend>
+  <depend>actionlib_msgs</depend>
 
 
   <buildtool_depend>catkin</buildtool_depend>

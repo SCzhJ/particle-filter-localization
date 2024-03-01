@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   serial
   message_generation
+  actionlib
+  actionlib_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -66,17 +68,17 @@ find_package(catkin REQUIRED COMPONENTS
  )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+ add_action_files(
+   FILES
+   NavAction.action
+ )
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
    std_msgs
    geometry_msgs
+   actionlib_msgs
  )
 
 ################################################
@@ -111,7 +113,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 LIBRARIES ${PROJECT_NAME}
-CATKIN_DEPENDS roscpp rospy std_msgs urdf xacro serial
+CATKIN_DEPENDS roscpp rospy std_msgs urdf xacro serial actionlib actionlib_msgs
 #  DEPENDS system_lib
 )
 
@@ -140,9 +142,9 @@ include
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(scan_2_node src/scan_2_node.cpp)
-add_executable(imu_2_odom src/imu_2_odom.cpp)
 add_executable(real_robot_transform src/real_robot_transform.cpp)
 add_executable(cmd2ser src/cmd2ser.cpp)
+add_executable(ser2msg src/ser2msg.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -155,20 +157,18 @@ add_executable(cmd2ser src/cmd2ser.cpp)
 target_link_libraries(scan_2_node
   ${catkin_LIBRARIES}
 )
-target_link_libraries(imu_2_odom
-  ${catkin_LIBRARIES}
-)
 target_link_libraries(real_robot_transform
   ${catkin_LIBRARIES}
 )
 target_link_libraries(cmd2ser
   ${catkin_LIBRARIES}
 )
+target_link_libraries(ser2msg
+  ${catkin_LIBRARIES}
+)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(imu_2_odom ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
 add_dependencies(real_robot_transform ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 #############

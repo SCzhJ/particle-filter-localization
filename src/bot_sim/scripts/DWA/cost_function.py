@@ -2,8 +2,8 @@
 
 from typing import Any
 import rospy
-from traj import *
 from dwa_util import *
+import copy
 
 
 class CostFunction:
@@ -11,10 +11,12 @@ class CostFunction:
                  iteration: int, pathfollow_iter: int, obstacle_iter: int):
         # static obstacle map
         self.stat_obs_map_util = MapUtil()
+        rospy.loginfo("got static map name: %s", cost_map_path)
         self.stat_obs_map_util.load_cost_map(cost_map_path)
 
         # dynamic obstacle map
         self.dyn_obs_map_util = MapUtil()
+        rospy.loginfo("got dynamic map name: %s", dynamic_map_name)
         self.dyn_obs_map_util.subscribe_map(dynamic_map_name)
 
         # iterations
@@ -27,7 +29,7 @@ class CostFunction:
 
         # dynamic_obstacle_cost = k_d * (N - i) ^ m_d, where N is the number of points in the trajectory, 
         # i is the index of the first point to meet collision. No collision return 0
-        self.k_d = 10
+        self.k_d = 100
         self.m_d = 1.5
 
         # static_obstacle_cost = k_o * (N - i) ^ m_o, where N is the number of points in the trajectory, 
@@ -73,15 +75,14 @@ class CostFunction:
                self.bearing_cost(world_frame_traj_points, next_point, self.iteration)
 
     def total_cost_omni(self, world_frame_traj_points: List, 
-                   robot_frame_traj_points, next_point: Point,
+                   robot_frame_traj_points: List, next_point: Point,
                    scaler: float = 1.0) -> float:
         '''
         traj_points: list of np.ndarray[3, 1]
         next_point: Point
         '''
-        return self.dynamic_obstacle_cost(robot_frame_traj_points, self.obstacle_iter) + \
-               self.static_obstacle_cost(world_frame_traj_points,self.obstacle_iter) + \
-               self.path_following_cost(world_frame_traj_points, next_point,self.pathfollow_iter, scaler)
+        rospy.loginfo("omni cost")
+        return self.dynamic_obstacle_cost(robot_frame_traj_points, self.obstacle_iter) + self.path_following_cost(world_frame_traj_points, next_point,self.pathfollow_iter, scaler)
     
     def constant_cost(self, k):
         return k
@@ -102,6 +103,7 @@ class CostFunction:
             x, y = self.dyn_obs_map_util.act_pos_to_grid_pos(copy.copy(robot_frame_traj[i][0][0]), 
                                                      copy.copy(robot_frame_traj[i][1][0]))
             occ_cost = self.dyn_obs_map_util.occupancy_value_check_grid_coord(x, y)
+
             if occ_cost > 20:
                 return self.k_d * (occ_cost/100 * (len(robot_frame_traj) - i)) ** self.m_d
         return 0

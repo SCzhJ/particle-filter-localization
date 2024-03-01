@@ -61,7 +61,7 @@ int main(int argc, char **argv)
 		ROS_INFO("Got param: %s", base_serial_port.c_str());
     }
     else{
-    	ROS_ERROR("Failed to get param: %s", base_serial_port.c_str());
+    	ROS_ERROR("Failed to get param: base_serial_port");
     }
 
     std::string vel_topic;
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 		ROS_INFO("Got param: %s", vel_topic.c_str());
     }
     else{
-    	ROS_ERROR("Failed to get param: %s", vel_topic.c_str());
+    	ROS_ERROR("Failed to get param: vel_topic");
     }
 
     try{

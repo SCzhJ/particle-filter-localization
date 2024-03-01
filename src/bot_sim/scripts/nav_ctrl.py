@@ -3,37 +3,45 @@
 from typing import Any
 import rospy
 from nav_msgs.msg import Path
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Twist
 from tf.transformations import quaternion_from_euler
 from nav_msgs.msg import Odometry
 from visualization_msgs.msg import Marker
 import tf2_ros
+import actionlib
+from bot_sim.msg import NavActionAction, NavActionGoal, NavActionFeedback, NavActionResult
+import numpy as np
 
 from bot_sim.srv import RRTStar
 
 import sys
 import os
-script_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"..","RRT"))
+script_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"RRT"))
 if script_path not in sys.path:
     sys.path.append(script_path)
 rospy.loginfo("Added path: %s", script_path)
 from RRT_star import *
 
-script_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"..","DWA"))
+script_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"DWA"))
 if script_path not in sys.path:
     sys.path.append(script_path)
 rospy.loginfo("Added path: %s", script_path)
+from traj import trajObject, TrajectoryMode
 from dwa_util import MapUtil
-from traj import *
-from test_util import *
-from cost_function import *
+from test_util_2 import PathPublisher, PointStampedPublisher, PointListPublisher
+from cost_function import CostFunction
 
 
 class NavCtrl:
+    _feedback = NavActionFeedback()
+    _result = NavActionResult()
     def __init__(self, trajectories: List[trajObject], cost_map_path: str, dyn_map_name: str,
                  dt: float, traj_cut_percentage: float = 0.5, iter_percentage: float = 0.5,
                  pathfollowext_percentage: float = 0.8, cmd_vel_topic: str = "/cmd_vel",
                  within_point: float = 1.5, within_goal: float = 0.5, cost_method: str = "omni"):
+        self._action_name = "nav_ctrl"
+        self._as = actionlib.SimpleActionServer(self._action_name, NavActionAction, execute_cb=self.nav_to_goal, auto_start = False)
+        self._as.start()
 
         self.trajectories = trajectories
         # Cut trajectory points to only keep remote points
@@ -46,7 +54,7 @@ class NavCtrl:
         # obstacbleext_iter is used for obstacle avoidance cost
         path_iter = int(iter_percentage * len(trajectories[0].traj_poses))
         pathfollowext_iter = int(pathfollowext_percentage * len(trajectories[0].traj_poses))
-        obsext_iter = len(trajectories[0].traj_poses) - path_iter - pathfollowext_iter
+        obsext_iter = len(trajectories[0].traj_poses)-1
 
         self.cost_func = CostFunction(cost_map_path, dyn_map_name,path_iter, pathfollowext_iter, obsext_iter)
         if cost_method == "omni":
@@ -112,12 +120,6 @@ class NavCtrl:
         else:
             return Point(goal_x, goal_y, 0)
     
-    def check_goal_reached(self, curr_x: float, curr_y: float, goal_x: float, goal_y: float):
-        if abs(goal_x - curr_x) < self.within_goal and abs(goal_y - curr_y) < self.within_goal:
-            return True
-        else:
-            return False
-    
     def check_best_traj_vel(self, next_point: Point):
         min_cost = float('inf')
         best_traj = None
@@ -128,16 +130,21 @@ class NavCtrl:
             if cost < min_cost:
                 min_cost = cost
                 best_traj = traj
-        return best_traj.x_vel, best_traj.y_vel, best_traj.omega
+        return best_traj.x_vel, best_traj.y_vel, best_traj.omega, best_traj
     
-    def nav_to_goal(self, goal_x: float, goal_y: float) -> int:
+    def nav_to_goal(self, goal):
         self.next_point_index = 0
         self.update_location()
         if self.loc_tran == None:
             rospy.logerr("No location found")
             return -1
+        else:
+            zero_progress = np.sqrt((goal.goal_x - self.loc_tran.transform.translation.x)**2 +\
+                                     (goal.goal_y - self.loc_tran.transform.translation.y)**2)
+            dist_to_goal = zero_progress
+            
         path_get = self.call_rrt_star(self.loc_tran.transform.translation.x, 
-                                      self.loc_tran.transform.translation.y, goal_x, goal_y)
+                                      self.loc_tran.transform.translation.y, goal.goal_x, goal.goal_y)
         if path_get != 1:
             rospy.logerr("path not found")
             return -1
@@ -148,20 +155,33 @@ class NavCtrl:
             # publish point
             next_point_publisher = PointStampedPublisher('next_point_topic')
             point_list_publisher = PointListPublisher(frame_id="map")
+            best_traj_publisher = PointListPublisher(frame_id="map",topic_name="best_traj_points",
+                                                     r=0.0,b=0.0,g=1.0,a=1.0,
+                                                     x_scale=0.05,y_scale=0.05,z_scale=0.05)
 
             rate = rospy.Rate(1/self.dt)
             vel = Twist()
-            while not self.check_goal_reached(self.loc_tran.transform.translation.x, 
-                                              self.loc_tran.transform.translation.y, goal_x, goal_y) and \
-                                                not rospy.is_shutdown():
+            while dist_to_goal > self.within_goal and not rospy.is_shutdown():
+                if self._as.is_preempt_requested():
+                    rospy.loginfo('%s: Preempted' % self._action_name)
+                    self._as.set_preempted()
+                    vel.linear.x = 0
+                    vel.linear.y = 0
+                    vel.angular.z = 0
+                    self.cmd_publisher.publish(vel)
+                    return 0
                 next_point = self.get_next_point(self.loc_tran.transform.translation.x, 
                                                  self.loc_tran.transform.translation.y, 
-                                                 goal_x, goal_y)
+                                                 goal.goal_x, goal.goal_y)
                 pub_point = next_point
                 pub_point.z = 0
                 next_point_publisher.publish_point(pub_point)
 
-                x_vel, y_vel, omega = self.check_best_traj_vel(next_point)
+                x_vel, y_vel, omega, best_traj = self.check_best_traj_vel(next_point)
+                best_traj_point_list = []
+                for point in best_traj.world_frame_traj_poses:
+                    best_traj_point_list.append(Point(point[0][0], point[1][0], 0.15))
+                best_traj_publisher.publish_point_list(best_traj_point_list)
 
                 vel.linear.x = x_vel
                 vel.linear.y = y_vel
@@ -177,6 +197,10 @@ class NavCtrl:
                 path_publisher.publish_path()
 
                 self.update_location()
+                dist_to_goal = np.sqrt((goal.goal_x - self.loc_tran.transform.translation.x)**2 +\
+                                        (goal.goal_y - self.loc_tran.transform.translation.y)**2)
+                self._feedback.progress_bar = dist_to_goal / zero_progress
+                self._as.publish_feedback(self._feedback)
                 rate.sleep()
 
             rospy.loginfo("goal reached")
@@ -184,6 +208,8 @@ class NavCtrl:
             vel.linear.y = 0
             vel.angular.z = 0
             self.cmd_publisher.publish(vel)
+            self._result.result = 1
+            self._as.set_succeeded(self._result)
             return 1
         
 if __name__=="__main__":
@@ -195,20 +221,12 @@ if __name__=="__main__":
     trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=15)
 
     for traj in trajectories:
-        TrajectoryMode.GenTrajectory(traj, dt, record_every_iter=3, iteration=5)
+        TrajectoryMode.GenTrajectory(traj, dt, record_every_iter=3, iteration=7)
     
     cost_map_path = rospy.get_param("~cost_map_path")
     dyn_map_name = rospy.get_param("~dyn_map_name")    
-    NavCtrl = NavCtrl(trajectories, cost_map_path, dyn_map_name, dt, traj_cut_percentage=0.2)
+    NavCtrl = NavCtrl(trajectories, cost_map_path, dyn_map_name, dt, traj_cut_percentage=0.1)
 
-    clicked_point_subscriber = ClickedPointSubscriber()
-
-    rate = rospy.Rate(10)
-
-    while not rospy.is_shutdown():
-        if clicked_point_subscriber.clicked_point is not None:
-            NavCtrl.nav_to_goal(clicked_point_subscriber.clicked_point.x, clicked_point_subscriber.clicked_point.y)
-            clicked_point_subscriber.clicked_point = None
-        rate.sleep()
+    rospy.spin()
     
 

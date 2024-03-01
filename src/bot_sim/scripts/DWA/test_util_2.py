@@ -62,7 +62,9 @@ class Base_footprint_pos:
     #     theta = euler_from_quaternion([trans.transform.rotation.x,trans.transform.rotation.y,trans.transform.rotation.z,trans.transform.rotation.w])[2]
     #     return Point(x, y, theta)
 class PointListPublisher:
-    def __init__(self, marker_id: int = 5, frame_id: str = "base_footprint", topic_name: str = 'point_list_marker'):
+    def __init__(self, marker_id: int = 5, frame_id: str = "base_footprint", topic_name: str = 'point_list_marker',
+                  r: float = 1.0, g: float = 0.0, b: float = 0.0, a: float = 1.0,
+                  x_scale: float = 0.02, y_scale: float = 0.02, z_scale: float = 0.02):
         self.marker_pub = rospy.Publisher(topic_name, Marker, queue_size=10)
         self.marker = Marker()
         self.marker.header.frame_id = frame_id
@@ -71,12 +73,13 @@ class PointListPublisher:
         self.marker.id = marker_id
         self.marker.type = Marker.POINTS
         self.marker.action = Marker.ADD
-        self.marker.scale.x = 0.02
-        self.marker.scale.y = 0.02
-        self.marker.color.r = 1.0
-        self.marker.color.g = 0.0
-        self.marker.color.b = 0.0
-        self.marker.color.a = 1.0
+        self.marker.scale.x = x_scale
+        self.marker.scale.y = y_scale
+        self.marker.scale.z = z_scale
+        self.marker.color.r = r
+        self.marker.color.g = g
+        self.marker.color.b = b
+        self.marker.color.a = a
         self.marker.pose.orientation.x = 0.0
         self.marker.pose.orientation.y = 0.0
         self.marker.pose.orientation.z = 0.0
