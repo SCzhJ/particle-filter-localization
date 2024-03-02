@@ -6,9 +6,11 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
 
+const double PI = 3.14159265358979323846;
+
 serial::Serial ser;
 const int write_length = 13;
-const int read_length = 9;
+const int read_length = 10;
 
 union FloatToByte{
     float f;
@@ -16,19 +18,25 @@ union FloatToByte{
 };
 
 class Message {
-private:
-    uint8_t SOF = 0x3A;
 public:
+    static const uint8_t SOF = 0xFF;
+    static const uint8_t eof = 0xFE;
+    float imu_change_threshold = 0.2;
+    float relative_change_threshold = 15;
+    float past_imu_angle;
+    float past_relative_angle;
     float imu_angle;
     float relative_angle;
     bool readFromBuffer(std::vector<uint8_t>& buffer) {
-        if (buffer.size() < write_length) {
+        if (buffer.size() < read_length) {
             return false; // Not enough data, 
         }
-        else if (buffer[0] == SOF) {
-            memcpy(&this->imu_angle, &buffer[1], sizeof(float));
-            memcpy(&this->relative_angle, &buffer[5], sizeof(float));
-            buffer.erase(buffer.begin(), buffer.begin()+write_length);
+        else if (buffer[0] == SOF && buffer[read_length-1] == eof) {
+            memcpy(&this->relative_angle, &buffer[1], sizeof(float));
+            memcpy(&this->imu_angle, &buffer[5], sizeof(float));
+            this->imu_angle += PI;
+            buffer.erase(buffer.begin(), buffer.begin()+read_length);
+            ROS_INFO("Read from buffer");
             return true;
         }
         else {
@@ -80,6 +88,12 @@ int main(int argc, char** argv)
         ROS_ERROR("Failed to retrieve parameter 'rotbase_frame'");
         return -1;
     }
+    std::string gimbal_frame;
+    if (!nh.getParam("/"+node_name+"/gimbal_frame", gimbal_frame))
+    {
+        ROS_ERROR("Failed to retrieve parameter 'gimbal_frame'");
+        return -1;
+    }
     std::string vel_topic;
     if (!nh.getParam("/"+node_name+"/vel_topic",vel_topic)){
     	ROS_ERROR("Failed to get param: %s", vel_topic.c_str());
@@ -95,7 +109,7 @@ int main(int argc, char** argv)
         serial::Timeout to = serial::Timeout::simpleTimeout(10000);
         ser.setTimeout(to);
         ser.setBytesize(serial::eightbits);
-        ser.setStopbits(serial::stopbits_one);
+        // ser.setStopbits(serial::stopbits_one);
         ser.setParity(serial::parity_none);
         ser.setFlowcontrol(serial::flowcontrol_none);
 
@@ -120,13 +134,21 @@ int main(int argc, char** argv)
     ros::Subscriber sub = nh.subscribe(vel_topic, 1000, cmdVelCallback);
 
     tf2_ros::TransformBroadcaster tfb;
-    geometry_msgs::TransformStamped transformStamped;
-    tf2::Quaternion q;
-    transformStamped.header.frame_id = virtual_frame;
-    transformStamped.child_frame_id = rotbase_frame;
-    transformStamped.transform.translation.x = 0.0;
-    transformStamped.transform.translation.y = 0.0;
-    transformStamped.transform.translation.z = 0.0;
+    geometry_msgs::TransformStamped transformVirtualtoRotbase;
+    tf2::Quaternion q1;
+    transformVirtualtoRotbase.header.frame_id = virtual_frame;
+    transformVirtualtoRotbase.child_frame_id = rotbase_frame;
+    transformVirtualtoRotbase.transform.translation.x = 0.0;
+    transformVirtualtoRotbase.transform.translation.y = 0.0;
+    transformVirtualtoRotbase.transform.translation.z = 0.0;
+
+    geometry_msgs::TransformStamped transformRotbaseToGimbal;
+    tf2::Quaternion q2;
+    transformRotbaseToGimbal.header.frame_id = rotbase_frame;
+    transformRotbaseToGimbal.child_frame_id = gimbal_frame;
+    transformRotbaseToGimbal.transform.translation.x = 0.0;
+    transformRotbaseToGimbal.transform.translation.y = 0.0;
+    transformRotbaseToGimbal.transform.translation.z = 0.0;
 
     Message message;
     std::vector<uint8_t> buffer_recv;
@@ -139,8 +161,8 @@ int main(int argc, char** argv)
         // Read data from the serial port
         buffer_recv.clear();
         size_t bytes_available = ser.available();
-        if (bytes_available < write_length) {
-            ROS_WARN("Not enough data available from the serial port");
+        if (bytes_available < read_length) {
+            // ROS_WARN("Not enough data available from the serial port");
         }
         else{
             while (ser.available())
@@ -171,21 +193,24 @@ int main(int argc, char** argv)
         if (bytes_written < write_length){
             ROS_ERROR("Failed to write all bytes to the serial port");
         }
-	    // Logging buffer_send content for debug
-	    std::stringstream ss;
-	    for(int i=0;i<write_length;i++){
-	        ss << "0x" << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buffer_send[i]) << " ";
-	    }
-	    ROS_INFO_STREAM("buffer_send content: " << ss.str());
+
+        transformVirtualtoRotbase.header.stamp = ros::Time::now();
+        q1.setRPY(0,0,message.imu_angle);
+        transformVirtualtoRotbase.transform.rotation.x = q1.x();
+        transformVirtualtoRotbase.transform.rotation.y = q1.y();
+        transformVirtualtoRotbase.transform.rotation.z = q1.z();
+        transformVirtualtoRotbase.transform.rotation.w = q1.w();
+        tfb.sendTransform(transformVirtualtoRotbase);
+
+        transformRotbaseToGimbal.header.stamp = ros::Time::now();
+        q2.setRPY(0,0,message.relative_angle);
+        transformRotbaseToGimbal.transform.rotation.x = q2.x();
+        transformRotbaseToGimbal.transform.rotation.y = q2.y();
+        transformRotbaseToGimbal.transform.rotation.z = q2.z();
+        transformRotbaseToGimbal.transform.rotation.w = q2.w();
+        tfb.sendTransform(transformRotbaseToGimbal);
 
 
-        transformStamped.header.stamp = ros::Time::now();
-        q.setRPY(0,0,message.imu_angle);
-        transformStamped.transform.rotation.x = q.x();
-        transformStamped.transform.rotation.y = q.y();
-        transformStamped.transform.rotation.z = q.z();
-        transformStamped.transform.rotation.w = q.w();
-        tfb.sendTransform(transformStamped);
         rate.sleep();
     }
 

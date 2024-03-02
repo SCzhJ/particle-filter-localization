@@ -145,6 +145,7 @@ add_executable(scan_2_node src/scan_2_node.cpp)
 add_executable(real_robot_transform src/real_robot_transform.cpp)
 add_executable(cmd2ser src/cmd2ser.cpp)
 add_executable(ser2msg src/ser2msg.cpp)
+add_executable(wavefront src/wavefront.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -164,6 +165,9 @@ target_link_libraries(cmd2ser
   ${catkin_LIBRARIES}
 )
 target_link_libraries(ser2msg
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(wavefront
   ${catkin_LIBRARIES}
 )
 

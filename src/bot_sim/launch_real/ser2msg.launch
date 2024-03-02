@@ -3,6 +3,7 @@
         <param name="serial_port" type="string" value="/dev/ttyACM0" />
         <param name="virtual_frame" type="string" value="virtual_frame" />
         <param name="rotbase_frame" type="string" value="rotbase_frame" />
+        <param name="gimbal_frame" type="string" value="gimbal_frame" />
         <param name="delta_time" type="double" value="0.01" />
         <param name="vel_topic" type="string" value="/velocity" />
     </node>

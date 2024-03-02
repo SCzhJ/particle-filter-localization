@@ -81,7 +81,6 @@ class CostFunction:
         traj_points: list of np.ndarray[3, 1]
         next_point: Point
         '''
-        rospy.loginfo("omni cost")
         return self.dynamic_obstacle_cost(robot_frame_traj_points, self.obstacle_iter) + self.path_following_cost(world_frame_traj_points, next_point,self.pathfollow_iter, scaler)
     
     def constant_cost(self, k):
