@@ -159,12 +159,11 @@ int main(int argc, char** argv) {
             continue;
         }
         grid_obs_points = laserScanToGrid(scan_record, transformStamped, cost_map);
-
         for (int i = 0; i < grid_obs_points.size(); i++) {
             wavefront(cost_map, grid_obs_points[i].first, grid_obs_points[i].second);
         }
-
         costMapPreprocess(cost_map, obs_threshold);
+        cost_map.header.stamp = ros::Time::now();
         pub.publish(cost_map);
         ros::spinOnce();
         rate.sleep();

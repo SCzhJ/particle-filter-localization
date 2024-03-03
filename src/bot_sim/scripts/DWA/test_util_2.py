@@ -110,6 +110,7 @@ class PathPublisher:
             pose_stamped.pose.orientation.z = q[2]
             pose_stamped.pose.orientation.w = q[3]
             self.path_msg.poses.append(pose_stamped)
+        self.path_msg.poses.append(pose_stamped)
 
     def publish_path(self):
         self.path_msg.header.stamp = rospy.Time.now()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import Any
+from typing import List
 import rospy
 from nav_msgs.msg import Path
 from geometry_msgs.msg import Point, Twist
@@ -16,11 +16,6 @@ from bot_sim.srv import RRTStar
 
 import sys
 import os
-script_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"RRT"))
-if script_path not in sys.path:
-    sys.path.append(script_path)
-rospy.loginfo("Added path: %s", script_path)
-from RRT_star import *
 
 script_path = os.path.abspath(os.path.join(os.path.dirname(__file__),"DWA"))
 if script_path not in sys.path:
@@ -207,6 +202,8 @@ class NavCtrl:
             vel.linear.x = 0
             vel.linear.y = 0
             vel.angular.z = 0
+            self.cmd_publisher.publish(vel)
+            self.cmd_publisher.publish(vel)
             self.cmd_publisher.publish(vel)
             self._result.result = 1
             self._as.set_succeeded(self._result)

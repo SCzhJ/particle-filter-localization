@@ -21,10 +21,10 @@ class Message {
 public:
     static const uint8_t SOF = 0xFF;
     static const uint8_t eof = 0xFE;
-    float imu_change_threshold = 0.2;
-    float relative_change_threshold = 15;
-    float past_imu_angle;
-    float past_relative_angle;
+    // float imu_change_threshold = 0.2;
+    // float relative_change_threshold = 15;
+    // float past_imu_angle;
+    // float past_relative_angle;
     float imu_angle;
     float relative_angle;
     bool readFromBuffer(std::vector<uint8_t>& buffer) {
@@ -136,16 +136,16 @@ int main(int argc, char** argv)
     tf2_ros::TransformBroadcaster tfb;
     geometry_msgs::TransformStamped transformVirtualtoRotbase;
     tf2::Quaternion q1;
-    transformVirtualtoRotbase.header.frame_id = virtual_frame;
-    transformVirtualtoRotbase.child_frame_id = rotbase_frame;
+    transformVirtualtoRotbase.header.frame_id = rotbase_frame;
+    transformVirtualtoRotbase.child_frame_id = virtual_frame;
     transformVirtualtoRotbase.transform.translation.x = 0.0;
     transformVirtualtoRotbase.transform.translation.y = 0.0;
     transformVirtualtoRotbase.transform.translation.z = 0.0;
 
     geometry_msgs::TransformStamped transformRotbaseToGimbal;
     tf2::Quaternion q2;
-    transformRotbaseToGimbal.header.frame_id = rotbase_frame;
-    transformRotbaseToGimbal.child_frame_id = gimbal_frame;
+    transformRotbaseToGimbal.header.frame_id = gimbal_frame;
+    transformRotbaseToGimbal.child_frame_id = rotbase_frame;
     transformRotbaseToGimbal.transform.translation.x = 0.0;
     transformRotbaseToGimbal.transform.translation.y = 0.0;
     transformRotbaseToGimbal.transform.translation.z = 0.0;
@@ -195,7 +195,7 @@ int main(int argc, char** argv)
         }
 
         transformVirtualtoRotbase.header.stamp = ros::Time::now();
-        q1.setRPY(0,0,message.imu_angle);
+        q1.setRPY(0,0,-message.imu_angle);
         transformVirtualtoRotbase.transform.rotation.x = q1.x();
         transformVirtualtoRotbase.transform.rotation.y = q1.y();
         transformVirtualtoRotbase.transform.rotation.z = q1.z();
@@ -203,7 +203,7 @@ int main(int argc, char** argv)
         tfb.sendTransform(transformVirtualtoRotbase);
 
         transformRotbaseToGimbal.header.stamp = ros::Time::now();
-        q2.setRPY(0,0,message.relative_angle);
+        q2.setRPY(0,0,-message.relative_angle);
         transformRotbaseToGimbal.transform.rotation.x = q2.x();
         transformRotbaseToGimbal.transform.rotation.y = q2.y();
         transformRotbaseToGimbal.transform.rotation.z = q2.z();
