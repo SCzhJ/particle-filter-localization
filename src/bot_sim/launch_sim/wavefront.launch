@@ -1,12 +1,12 @@
 <launch>
     <node pkg="bot_sim" type="wavefront" name="wavefront" output="screen">
         <param name="base_frame" type="string" value="base_footprint" />
-        <param name="laser_frame" type="string" value="base_link" />
+        <param name="laser_frame" type="string" value="laser" />
         <param name="scan_topic" type="string" value="scan" />
         <param name="map_topic" type="string" value="cost_map" />
         <param name="map_width" type="int" value="100" />
         <param name="map_height" type="int" value="100" />
         <param name="obs_threshold" type="int" value="10" />
-        <param name="delta_time" type="int" value="1" />
+        <param name="delta_time" type="double" value="0.05" />
     </node>
 </launch>

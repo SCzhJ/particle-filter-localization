@@ -35,28 +35,20 @@ void wavefront(nav_msgs::OccupancyGrid& cost_map, int obs_x, int obs_y) {
     }
 }
 
-std::vector<std::pair<int,int>> laserScanToGrid(const sensor_msgs::LaserScan scan, geometry_msgs::TransformStamped transform_from_base_to_laser, nav_msgs::OccupancyGrid& cost_map) {
+std::vector<std::pair<int,int>> laserScanToGrid(const sensor_msgs::LaserScan scan, geometry_msgs::TransformStamped transformStamped, nav_msgs::OccupancyGrid& cost_map) {
     std::vector<std::pair<int,int>> grid_obs_points;
-    tf2::Transform tf2_transform;
-    tf2::fromMsg(transform_from_base_to_laser.transform, tf2_transform);
-    tf2::Transform tf_laser2base = tf2_transform.inverse();
+    int x_grid, y_grid;
+    tf2::Transform tf_transform;
+    tf2::fromMsg(transformStamped.transform, tf_transform);
     for (int i = 0; i < scan.ranges.size(); i++) {
         double angle = scan.angle_min + i * scan.angle_increment;
         double x = scan.ranges[i] * cos(angle) - cost_map.info.origin.position.x;
         double y = scan.ranges[i] * sin(angle) - cost_map.info.origin.position.y;
+        tf2::Vector3 point_in(x, y, 0.0);
+        tf2::Vector3 point_out = tf_transform * point_in;
 
-        // // Transform the point to the base_frame using the transform from base_frame to point
-        // geometry_msgs::PointStamped point_in_laser_frame;
-        // point_in_laser_frame.point.x = x;
-        // point_in_laser_frame.point.y = y;
-        // geometry_msgs::PointStamped point_in_base_frame;
-        // tf2::doTransform(point_in_laser_frame, point_in_base_frame, transform_from_base_to_laser);
-
-        // // Convert the point to the grid
-        // int x_grid = (point_in_base_frame.point.x - cost_map.info.origin.position.x) / cost_map.info.resolution;
-        // int y_grid = (point_in_base_frame.point.y - cost_map.info.origin.position.y) / cost_map.info.resolution;
-        int x_grid = x/cost_map.info.resolution;
-        int y_grid = y/cost_map.info.resolution;
+        int x_grid = point_out.x()/cost_map.info.resolution;
+        int y_grid = point_out.y()/cost_map.info.resolution;
         if (x_grid >= 0 && x_grid < cost_map.info.width && y_grid >= 0 && y_grid < cost_map.info.height) {
             grid_obs_points.push_back(std::make_pair(x_grid, y_grid));
         }
@@ -127,23 +119,21 @@ int main(int argc, char** argv) {
         ROS_ERROR("Failed to retrieve parameter 'obs_threshold'");
         return -1;
     }
-    int delta_time;
+    double delta_time;
     if (!nh.getParam("/"+node_name+"/delta_time", delta_time))
     {
         ROS_ERROR("Failed to retrieve parameter 'delta_time'");
         return -1;
     }
-    ros::Duration cache_time(1200.0);
-    tf2_ros::Buffer tfBuffer(cache_time);
+    tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener tfListener(tfBuffer);
 
-    geometry_msgs::TransformStamped transform;
+    geometry_msgs::TransformStamped transformStamped;
 
     ros::Subscriber sub = nh.subscribe(scan_topic, 1, scanCallback);
     ros::Publisher pub = nh.advertise<nav_msgs::OccupancyGrid>(map_topic, 1);
 
-    float r = 1.0 / delta_time;
-    ros::Rate rate(r);
+    ros::Rate rate(1/delta_time);
 
     nav_msgs::OccupancyGrid cost_map;
     cost_map.header.frame_id = base_frame;
@@ -164,11 +154,11 @@ int main(int argc, char** argv) {
     while(ros::ok()) {
         std::fill(cost_map.data.begin(), cost_map.data.end(), -1);
         try {
-            transform = tfBuffer.lookupTransform(laser_frame, base_frame, ros::Time(2.0));
+            transformStamped = tfBuffer.lookupTransform(base_frame, laser_frame, ros::Time(0));
         } catch (tf2::TransformException &ex) {
-            ROS_WARN("%s", ex.what());
+            continue;
         }
-        grid_obs_points = laserScanToGrid(scan_record, transform, cost_map);
+        grid_obs_points = laserScanToGrid(scan_record, transformStamped, cost_map);
 
         for (int i = 0; i < grid_obs_points.size(); i++) {
             wavefront(cost_map, grid_obs_points[i].first, grid_obs_points[i].second);

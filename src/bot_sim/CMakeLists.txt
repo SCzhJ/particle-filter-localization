@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  geometry_msgs
   urdf
   xacro
   tf2_ros
@@ -146,6 +147,7 @@ add_executable(real_robot_transform src/real_robot_transform.cpp)
 add_executable(cmd2ser src/cmd2ser.cpp)
 add_executable(ser2msg src/ser2msg.cpp)
 add_executable(wavefront src/wavefront.cpp)
+add_executable(test_transform src/test_transform.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -168,6 +170,9 @@ target_link_libraries(ser2msg
   ${catkin_LIBRARIES}
 )
 target_link_libraries(wavefront
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(test_transform
   ${catkin_LIBRARIES}
 )
 
