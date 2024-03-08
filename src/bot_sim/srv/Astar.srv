@@ -1,0 +1,6 @@
+# Request
+geometry_msgs/Point point1
+geometry_msgs/Point point2
+---
+# Response
+visualization_msgs/Marker marker

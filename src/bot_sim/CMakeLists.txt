@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(bot_sim)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   geometry_msgs
+  visualization_msgs
   urdf
   xacro
   tf2_ros
@@ -20,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   actionlib
   actionlib_msgs
+  livox_ros_driver2
 )
 
 ## System dependencies are found with CMake's conventions
@@ -56,16 +58,16 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  TwoPoints.msg
+)
 
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
    RRTStar.srv
+   Astar.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -80,6 +82,7 @@ find_package(catkin REQUIRED COMPONENTS
    std_msgs
    geometry_msgs
    actionlib_msgs
+   visualization_msgs
  )
 
 ################################################
@@ -114,7 +117,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 LIBRARIES ${PROJECT_NAME}
-CATKIN_DEPENDS roscpp rospy std_msgs urdf xacro serial actionlib actionlib_msgs
+CATKIN_DEPENDS roscpp rospy std_msgs urdf xacro serial actionlib actionlib_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -148,6 +151,9 @@ add_executable(cmd2ser src/cmd2ser.cpp)
 add_executable(ser2msg src/ser2msg.cpp)
 add_executable(wavefront src/wavefront.cpp)
 add_executable(test_transform src/test_transform.cpp)
+add_executable(lidar_filter src/lidar_filter.cpp)
+add_executable(threeD_lidar_filter src/threeD_lidar_filter.cpp)
+add_executable(dbscan_bfs src/dbscan_bfs.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -175,32 +181,22 @@ target_link_libraries(wavefront
 target_link_libraries(test_transform
   ${catkin_LIBRARIES}
 )
-
+target_link_libraries(lidar_filter
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(threeD_lidar_filter
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(dbscan_bfs
+  ${catkin_LIBRARIES}
+)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(real_robot_transform ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 #############
 ## Install ##
-#############
-
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# catkin_install_python(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark executables for installation
-## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-# install(TARGETS ${PROJECT_NAME}_node
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark libraries for installation
+#############3D_lidar_filteration
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_libraries.html
 # install(TARGETS ${PROJECT_NAME}
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

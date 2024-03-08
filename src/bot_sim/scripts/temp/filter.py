@@ -34,6 +34,12 @@ class LaserScanProcessor:
 if __name__ == '__main__':
     rospy.init_node('laser_scan_angle_2d')
     processor = LaserScanProcessor(-1.3, 1.3)
+    double min_angle;
+    if (!nh.getParam("/"+node_name+"/delta_time", delta_time))
+    {
+        ROS_ERROR("Failed to retrieve parameter 'delta_time'");
+        return -1;
+    }
     rate = rospy.Rate(10)  # 10hz
     while not rospy.is_shutdown():
         rospy.spin()

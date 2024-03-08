@@ -1,5 +1,0 @@
-<launch>
-    <arg name="filename" value="$(find bot_sim)/map/ManyObstaclesMap" />
-    <node name="map_save" pkg="map_server" type="map_saver" args="-f $(arg filename)" />
-</launch>
-

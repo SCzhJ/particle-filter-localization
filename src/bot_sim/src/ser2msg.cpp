@@ -140,7 +140,7 @@ int main(int argc, char** argv)
     transformVirtualtoRotbase.child_frame_id = virtual_frame;
     transformVirtualtoRotbase.transform.translation.x = 0.0;
     transformVirtualtoRotbase.transform.translation.y = 0.0;
-    transformVirtualtoRotbase.transform.translation.z = 0.0;
+    transformVirtualtoRotbase.transform.translation.z = -0.1;
 
     geometry_msgs::TransformStamped transformRotbaseToGimbal;
     tf2::Quaternion q2;
@@ -148,7 +148,7 @@ int main(int argc, char** argv)
     transformRotbaseToGimbal.child_frame_id = rotbase_frame;
     transformRotbaseToGimbal.transform.translation.x = 0.0;
     transformRotbaseToGimbal.transform.translation.y = 0.0;
-    transformRotbaseToGimbal.transform.translation.z = 0.0;
+    transformRotbaseToGimbal.transform.translation.z = -0.3;
 
     Message message;
     std::vector<uint8_t> buffer_recv;
