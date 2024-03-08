@@ -89,15 +89,12 @@ int main(int argc, char **argv)
         try
         {
             transformStamped = tfBuffer.lookupTransform(base_frame, laser_frame, ros::Time(0));
-            // std::cout << transformStamped.transform.translation.x << " "
-            //     << transformStamped.transform.translation.y << " "
-            //     << transformStamped.transform.translation.z << std::endl;
         }
         catch (tf2::TransformException &ex)
         {
             std::cout << "Error: " << ex.what() << std::endl;
         }
-        auto scan_new = scan_copy_left;
+        auto scan_new = scan_copy_right;
         auto scan_record_left = scan_copy_left;
         auto scan_record_right = scan_copy_right;
         scan_new.points.clear();
@@ -111,20 +108,12 @@ int main(int argc, char **argv)
             double z = scan_record_left.points[i].z;
             tf2::Vector3 point_in(x, y, z);
             tf2::Vector3 point_out = tf_transform * point_in;
-            // std::cout << tf_transform.getOrigin().x() << " "
-            //   << tf_transform.getOrigin().y() << " "
-            //   << tf_transform.getOrigin().z() << std::endl;
             double nx = point_out.x();
             double ny = point_out.y();
             double nz = point_out.z();
-            // std::cout<<nx<<" "<<ny<<" "<<nz<<" "<<x<<" "<<y<<' '<<z<<std::endl;
-            // std::cout<<"________"<<std::endl;
             if (nx * nx + ny * ny > RADIUS_sq && z < Z_max)
             {
                 scan_new.points.push_back(scan_record_left.points[i]);
-                scan_new.points[scan_new.points.size() - 1].x = nx;
-                scan_new.points[scan_new.points.size() - 1].y = ny;
-                scan_new.points[scan_new.points.size() - 1].z = nz;
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
             }
         }
@@ -135,23 +124,16 @@ int main(int argc, char **argv)
             double z = scan_record_right.points[i].z;
             tf2::Vector3 point_in(x, y, z);
             tf2::Vector3 point_out = tf_transform * point_in;
-            // std::cout << tf_transform.getOrigin().x() << " "
-            //   << tf_transform.getOrigin().y() << " "
-            //   << tf_transform.getOrigin().z() << std::endl;
             double nx = point_out.x();
             double ny = point_out.y();
             double nz = point_out.z();
-            // std::cout<<nx<<" "<<ny<<" "<<nz<<" "<<x<<" "<<y<<' '<<z<<std::endl;
-            // std::cout<<"________"<<std::endl;
             if (nx * nx + ny * ny > RADIUS_sq && z < Z_max)
             {
                 scan_new.points.push_back(scan_record_right.points[i]);
-                scan_new.points[scan_new.points.size() - 1].x = nx;
-                scan_new.points[scan_new.points.size() - 1].y = ny;
-                scan_new.points[scan_new.points.size() - 1].z = nz;
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
             }
         }
+        scan_new.header.stamp = ros::Time::now();
         scan_new.point_num = scan_new.points.size();
         pub.publish(scan_new);
 

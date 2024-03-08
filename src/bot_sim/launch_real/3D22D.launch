@@ -19,7 +19,7 @@
             scan_time: 0.1
             range_min: 0.38
             range_max: 10
-            use_inf: true
+            use_inf: false
             inf_epsilon: 1.0
 
             # Concurrency level, affects number of pointclouds queued for processing and number of threads used

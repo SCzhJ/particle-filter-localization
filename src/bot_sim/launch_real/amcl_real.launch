@@ -29,7 +29,7 @@
   <param name="update_min_a" value="0.07"/>
 
   <param name="odom_frame_id" value="camera_init"/>
-  <param name="base_frame_id" value="base_footprint"/>
+  <param name="base_frame_id" value="gimbal_frame"/>
   <param name="global_frame_id" value="map"/>
 
   <param name="resample_interval" value="2"/>
