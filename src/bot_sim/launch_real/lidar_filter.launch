@@ -1,10 +1,10 @@
 <launch>
-  <node pkg="bot_sim" type="lidar_filter" name="lidar_filter" output="screen">
+  <!-- <node pkg="bot_sim" type="lidar_filter" name="lidar_filter" output="screen">
       <param name="subscribed_scan" type="string" value="scan_laser" />
       <param name="new_scan" type="string" value="new_scan" />
       <param name="min_angle" type="double" value="-1.2" />
       <param name="max_angle" type="double" value="1.2" />
-  </node>
+  </node> -->
   <node pkg="bot_sim" type="threeD_lidar_filter" name="threeD_lidar_filter" output="screen">
       <param name="base_frame" type="string" value="gimbal_frame" />
       <param name="laser_frame" type="string" value="_3DLidar_frame" />

@@ -29,8 +29,6 @@ int MAXN=200;
 //bfs方向数组
 int dx[4] = {0, 0, 1, -1};
 int dy[4] = {1, -1, 0, 0};
-int dx2[4] = {1, -1, 1, -1};
-int dy2[4] = {1, 1, -1, -1};
 
 //dbscan 点
 struct dbscan_Point {
@@ -116,26 +114,23 @@ void bfs(std::vector<dbscan_Point>& points, std::vector<std::vector<int>>& data,
         for (int i = 0; i < 4; ++i) {
             int nx = p.x + dx[i];
             int ny = p.y + dy[i];
+
+            // 检查坐标是否在地图内
             if (nx < 0 || ny >= height || ny < 0 || nx >= width) {
                 continue;
                 // std::cout<<"out of range\n";
             }
-            int next_value = std::max(0, int(value - decrease));
-            if (data[ny][nx] < next_value) {
-                data[ny][nx] = next_value;
-                q.push({{nx, ny}, next_value});
-            }
-        }
-        for (int i = 0; i < 4; i++) {
-            int nx = p.x + dx2[i];
-            int ny = p.y + dy2[i];
-            if (nx < 0 || ny >= height || ny < 0 || nx >= width) {
+
+            // 检查这个点是否已经被访问过
+            if (data[ny][nx] != 0) {
                 continue;
-                // std::cout<<"out of range\n";
+                // std::cout<<"visited\n";
             }
-            int next_value = std::max(0, int(value - decrease*1.4));
-            if (data[ny][nx] < next_value) {
-                data[ny][nx] = next_value;
+
+            // 每次减10，直到等于0
+            int next_value = std::max(0, value - decrease);
+            data[ny][nx] = next_value;
+            if (next_value > 0) {
                 q.push({{nx, ny}, next_value});
             }
         }

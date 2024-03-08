@@ -4,9 +4,9 @@
         <param name="laser_frame" type="string" value="_3DLidar_frame" />
         <param name="scan_topic" type="string" value="scan" />
         <param name="map_topic" type="string" value="cost_map" />
-        <param name="map_width" type="int" value="100" />
-        <param name="map_height" type="int" value="100" />
-        <param name="obs_threshold" type="int" value="2" />
-        <param name="delta_time" type="double" value="0.5" />
+        <param name="map_resolution" type="double" value="0.01" />
+        <param name="map_len" type="int" value="100" />
+        <param name="obs_threshold" type="int" value="5" />
+        <param name="delta_time" type="double" value="0.05" />
     </node>
 </launch>

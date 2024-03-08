@@ -12,6 +12,6 @@
         <param name="rotbase_frame" type="string" value="rotbase_frame" />
         <param name="gimbal_frame" type="string" value="gimbal_frame" />
         <param name="_3DLidar_frame" type="string" value="_3DLidar_frame" />
-        <param name="_2DLidar_frame" type="string" value="_2DLidar_frame" />
+        <param name="_2DLidar_frame" type="string" value="laser" />
     </node>
 </launch>

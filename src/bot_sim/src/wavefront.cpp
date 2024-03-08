@@ -55,6 +55,22 @@ std::vector<std::pair<int,int>> laserScanToGrid(const sensor_msgs::LaserScan sca
     }
     return grid_obs_points;
 }
+std::vector<std::pair<int,int>> laserScanToGrid(const sensor_msgs::LaserScan scan, nav_msgs::OccupancyGrid& distance_map) {
+    std::vector<std::pair<int,int>> grid_obs_points;
+    int x_grid, y_grid;
+    for (int i = 0; i < scan.ranges.size(); i++) {
+        double angle = scan.angle_min + i * scan.angle_increment;
+        double x = scan.ranges[i] * cos(angle) - distance_map.info.origin.position.x;
+        double y = scan.ranges[i] * sin(angle) - distance_map.info.origin.position.y;
+
+        int x_grid = x/distance_map.info.resolution;
+        int y_grid = y/distance_map.info.resolution;
+        if (x_grid >= 0 && x_grid < distance_map.info.width && y_grid >= 0 && y_grid < distance_map.info.height) {
+            grid_obs_points.push_back(std::make_pair(x_grid, y_grid));
+        }
+    }
+    return grid_obs_points;
+}
 
 sensor_msgs::LaserScan scan_record;
 
@@ -62,12 +78,12 @@ void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan) {
     scan_record = *scan;
 }
 
-void costMapPreprocess(nav_msgs::OccupancyGrid& cost_map, int threshold) {
-    for (int i = 0; i < cost_map.info.width * cost_map.info.height; i++) {
-        if (cost_map.data[i] < threshold && cost_map.data[i] != -1) {
+void costMapPreprocess(nav_msgs::OccupancyGrid& cost_map, const nav_msgs::OccupancyGrid& distance_map, const int& threshold) {
+    for (int i = 0; i < distance_map.info.width * distance_map.info.height; i++) {
+        if (distance_map.data[i] < threshold && distance_map.data[i] != -1) {
             cost_map.data[i] = 100;
         }
-        else if(cost_map.data[i] != -1){
+        else{
             cost_map.data[i] = 0;
         }
     }
@@ -102,15 +118,15 @@ int main(int argc, char** argv) {
         ROS_ERROR("Failed to retrieve parameter 'map_topic'");
         return -1;
     }
-    int map_width;
-    if (!nh.getParam("/"+node_name+"/map_width", map_width))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'map_width'");
+    float map_resolution;
+    if (!nh.getParam("/"+node_name+"/map_resolution",map_resolution)){
+        ROS_ERROR("Failed to retrieve parameter 'map_resolution'");
         return -1;
     }
-    int map_height;
-    if (!nh.getParam("/"+node_name+"/map_height",map_height)){
-        ROS_ERROR("Failed to retrieve parameter 'map_height'");
+    int map_len;
+    if (!nh.getParam("/"+node_name+"/map_len", map_len))
+    {
+        ROS_ERROR("Failed to retrieve parameter 'map_len'");
         return -1;
     }
     int obs_threshold;
@@ -137,32 +153,37 @@ int main(int argc, char** argv) {
 
     nav_msgs::OccupancyGrid cost_map;
     cost_map.header.frame_id = base_frame;
-    cost_map.info.resolution = 0.05;
-    cost_map.info.width = map_width;
-    cost_map.info.height = map_height;
-    cost_map.info.origin.position.x = - map_width * cost_map.info.resolution / 2; 
-    cost_map.info.origin.position.y = - map_width * cost_map.info.resolution / 2;
+    cost_map.info.resolution = map_resolution;
+    cost_map.info.width = map_len;
+    cost_map.info.height = map_len;
+    cost_map.info.origin.position.x = - map_len * cost_map.info.resolution / 2; 
+    cost_map.info.origin.position.y = - map_len * cost_map.info.resolution / 2;
     cost_map.info.origin.position.z = 0;
     cost_map.info.origin.orientation.x = 0;
     cost_map.info.origin.orientation.y = 0;
     cost_map.info.origin.orientation.z = 0;
     cost_map.info.origin.orientation.w = 1;
 
+
     std::vector<std::pair<int,int>> grid_obs_points;
     cost_map.data.resize(cost_map.info.width * cost_map.info.height, -1);
 
+    auto distance_map = cost_map;
+
     while(ros::ok()) {
-        std::fill(cost_map.data.begin(), cost_map.data.end(), -1);
-        try {
-            transformStamped = tfBuffer.lookupTransform(base_frame, laser_frame, ros::Time(0));
-        } catch (tf2::TransformException &ex) {
-            continue;
-        }
-        grid_obs_points = laserScanToGrid(scan_record, transformStamped, cost_map);
+        // std::fill(cost_map.data.begin(), cost_map.data.end(), -1);
+        std::fill(distance_map.data.begin(), distance_map.data.end(), -1);
+        // try {
+        //     transformStamped = tfBuffer.lookupTransform(base_frame, laser_frame, ros::Time(0));
+        // } catch (tf2::TransformException &ex) {
+        //     continue;
+        // }
+        // grid_obs_points = laserScanToGrid(scan_record, transformStamped, cost_map);
+        grid_obs_points = laserScanToGrid(scan_record, distance_map);
         for (int i = 0; i < grid_obs_points.size(); i++) {
-            wavefront(cost_map, grid_obs_points[i].first, grid_obs_points[i].second);
+            wavefront(distance_map, grid_obs_points[i].first, grid_obs_points[i].second);
         }
-        costMapPreprocess(cost_map, obs_threshold);
+        costMapPreprocess(cost_map, distance_map, obs_threshold);
         cost_map.header.stamp = ros::Time::now();
         pub.publish(cost_map);
         ros::spinOnce();

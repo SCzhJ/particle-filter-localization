@@ -122,7 +122,10 @@ int main(int argc, char **argv)
             if (nx * nx + ny * ny > RADIUS_sq && z < Z_max)
             {
                 scan_new.points.push_back(scan_record_left.points[i]);
-                pcl_cloud.points.push_back(pcl::PointXYZ(scan_record_left.points[i].x, scan_record_left.points[i].y, scan_record_left.points[i].z));
+                scan_new.points[scan_new.points.size() - 1].x = nx;
+                scan_new.points[scan_new.points.size() - 1].y = ny;
+                scan_new.points[scan_new.points.size() - 1].z = nz;
+                pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
             }
         }
         for (int i = 0; i < scan_record_right.points.size(); i++)
@@ -143,7 +146,10 @@ int main(int argc, char **argv)
             if (nx * nx + ny * ny > RADIUS_sq && z < Z_max)
             {
                 scan_new.points.push_back(scan_record_right.points[i]);
-                pcl_cloud.points.push_back(pcl::PointXYZ(scan_record_right.points[i].x, scan_record_right.points[i].y, scan_record_right.points[i].z));
+                scan_new.points[scan_new.points.size() - 1].x = nx;
+                scan_new.points[scan_new.points.size() - 1].y = ny;
+                scan_new.points[scan_new.points.size() - 1].z = nz;
+                pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
             }
         }
         scan_new.point_num = scan_new.points.size();

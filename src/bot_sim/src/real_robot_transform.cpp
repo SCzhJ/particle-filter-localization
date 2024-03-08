@@ -2,6 +2,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2/LinearMath/Quaternion.h>
+const float PI = 3.14159265358979323846;
 
 int main(int argc, char** argv){
     std::string node_name = "real_robot_transform";
@@ -41,31 +42,17 @@ int main(int argc, char** argv){
     transformStamped1.transform.translation.x = 0.0;
     transformStamped1.transform.translation.y = 0.0;
     transformStamped1.transform.translation.z = 0.0;
-    tf2::Quaternion q1;
-    q1.setRPY(180 * M_PI / 180.0, 0, 0);
-    transformStamped1.transform.rotation.x = q1.x();
-    transformStamped1.transform.rotation.y = q1.y();
-    transformStamped1.transform.rotation.z = q1.z();
-    transformStamped1.transform.rotation.w = q1.w();
-    
-    geometry_msgs::TransformStamped transformStamped2;
-    transformStamped2.header.frame_id = gimbal_frame;
-    transformStamped2.child_frame_id = _2DLidar_frame;
-    transformStamped2.transform.translation.x = 0.0;
-    transformStamped2.transform.translation.y = 0.0;
-    transformStamped2.transform.translation.z = 0.0;
-    transformStamped2.transform.rotation.x = 0;
-    transformStamped2.transform.rotation.y = 0;
-    transformStamped2.transform.rotation.z = 0;
-    transformStamped2.transform.rotation.w = 1;
+    tf2::Quaternion q;
+    q.setRPY(PI, 0, 0);
+    transformStamped1.transform.rotation.x = q.x();
+    transformStamped1.transform.rotation.y = q.y();
+    transformStamped1.transform.rotation.z = q.z();
+    transformStamped1.transform.rotation.w = q.w();
 
     ros::Rate rate(100.0);
     while (nh.ok()){
         transformStamped1.header.stamp = ros::Time::now();
-        transformStamped2.header.stamp = ros::Time::now();
-
         broadcaster.sendTransform(transformStamped1);
-        broadcaster.sendTransform(transformStamped2);
         ros::spinOnce();
         rate.sleep();
     }
