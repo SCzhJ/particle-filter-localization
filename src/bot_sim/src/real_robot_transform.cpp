@@ -29,7 +29,7 @@ int main(int argc, char** argv){
     transformStamped1.child_frame_id = gimbal_frame;
     transformStamped1.transform.translation.x = -0.13388;
     transformStamped1.transform.translation.y = -0.11369;
-    transformStamped1.transform.translation.z = 0.0;
+    transformStamped1.transform.translation.z = -3.0;
     tf2::Quaternion qx;
     qx.setRPY(PI, 0, 0);
     tf2::Quaternion qz;

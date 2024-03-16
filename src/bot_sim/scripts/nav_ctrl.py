@@ -33,7 +33,7 @@ class NavCtrl:
     def __init__(self, trajectories: List[trajObject], cost_map_path: str, dyn_map_name: str,
                  dt: float, traj_cut_percentage: float = 0.5, iter_percentage: float = 0.5,
                  pathfollowext_percentage: float = 0.8, cmd_vel_topic: str = "/cmd_vel",
-                 within_point: float = 1.5, within_goal: float = 0.5, cost_method: str = "omni"):
+                 within_point: float = 0.7, within_goal: float = 0.5, cost_method: str = "omni"):
         self._action_name = "nav_ctrl"
         self._as = actionlib.SimpleActionServer(self._action_name, NavActionAction, execute_cb=self.nav_to_goal, auto_start = False)
         self._as.start()
@@ -78,6 +78,8 @@ class NavCtrl:
         # other
         self.cmd_publisher = rospy.Publisher(cmd_vel_topic, Twist, queue_size=10)
         self.dt = dt
+        self.vel_scaler = 4
+        self.loc_tran = None
     
     def call_rrt_star(self, curr_x: float, curr_y: float, goal_x: float, goal_y: float):
         rospy.wait_for_service('rrt_star')
@@ -101,7 +103,9 @@ class NavCtrl:
             for traj in self.trajectories:
                 traj.CalcWorldFramePoses(self.loc_tran.transform)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            pass
+            rospy.logerr("No location found")
+            rospy.logerr(self.world_frame)
+            rospy.logerr(self.robot_frame)
     
     def get_next_point(self, curr_x: float, curr_y: float, goal_x: float, goal_y: float):
         if self.next_point_index < self.path_len:
@@ -129,7 +133,8 @@ class NavCtrl:
     
     def nav_to_goal(self, goal):
         self.next_point_index = 0
-        self.update_location()
+        while self.loc_tran == None:
+            self.update_location()
         if self.loc_tran == None:
             rospy.logerr("No location found")
             return -1
@@ -178,8 +183,8 @@ class NavCtrl:
                     best_traj_point_list.append(Point(point[0][0], point[1][0], 0.15))
                 best_traj_publisher.publish_point_list(best_traj_point_list)
 
-                vel.linear.x = x_vel
-                vel.linear.y = y_vel
+                vel.linear.x = x_vel/self.vel_scaler
+                vel.linear.y = -y_vel/self.vel_scaler
                 vel.angular.z = omega
                 self.cmd_publisher.publish(vel)
 
@@ -215,14 +220,14 @@ if __name__=="__main__":
     dt = 0.2
     # trajectories = TrajectoryMode.DifferentialDriveTrajectory(x_vel=0.5, omega_increment=0.1, num_of_traj_one_side=7) + \
     #     TrajectoryMode.DifferentialDriveTrajectory(x_vel=-0.5, omega_increment=0.1, num_of_traj_one_side=7)
-    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=15)
+    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=20)
 
     for traj in trajectories:
-        TrajectoryMode.GenTrajectory(traj, dt, record_every_iter=3, iteration=7)
+        TrajectoryMode.GenTrajectory(traj, 0.05, record_every_iter=1, iteration=5)
     
     cost_map_path = rospy.get_param("~cost_map_path")
     dyn_map_name = rospy.get_param("~dyn_map_name")    
-    NavCtrl = NavCtrl(trajectories, cost_map_path, dyn_map_name, dt, traj_cut_percentage=0.1)
+    NavCtrl = NavCtrl(trajectories, cost_map_path, dyn_map_name, dt, traj_cut_percentage=0.4)
 
     rospy.spin()
     

@@ -52,7 +52,7 @@ void msgs_to_grid(const sensor_msgs::LaserScan::ConstPtr& msg)
     nav_msgs::OccupancyGrid grid;
 
     // 设置占用网格的基本属性
-    grid.header.frame_id = "laser";// 调试雷达时改为"odom'->"laser"
+    grid.header.frame_id = "gimbal_frame";// 调试雷达时改为"odom'->"laser"
     grid.info.resolution = 0.05;  // 网格的分辨率为0.05米
     grid.info.width = MAXN;  // 网格的宽度为500个单元 uint32
     grid.info.height = MAXN;  // 网格的高度为500个单元 uint32

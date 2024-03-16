@@ -6,7 +6,9 @@ from geometry_msgs.msg import Point
 from bot_sim.srv import RRTStar, RRTStarResponse
 
 folder_path = "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/"
-rrt = RRT_Star(folder_path + "DWA/CostMap/CostMapA1d5B1d8")
+node_name="RRT_star_srv"
+map_name=rospy.get_param(node_name+'/map_name')
+rrt = RRT_Star(folder_path + "DWA/CostMap/"+map_name)
 
 def handle_rrt_star(req):
     global rrt

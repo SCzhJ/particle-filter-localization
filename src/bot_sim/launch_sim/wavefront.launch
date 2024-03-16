@@ -1,10 +1,10 @@
 <launch>
     <node pkg="bot_sim" type="wavefront" name="wavefront" output="screen">
-        <param name="base_frame" type="string" value="gimbal_frame" />
-        <param name="laser_frame" type="string" value="_3DLidar_frame" />
-        <param name="scan_topic" type="string" value="scan" />
-        <param name="map_topic" type="string" value="cost_map" />
-        <param name="map_resolution" type="double" value="0.01" />
+        <param name="base_frame" type="string" value="base_footprint" />
+        <param name="laser_frame" type="string" value="laser_lrf_link" />
+        <param name="scan_topic" type="string" value="scan_laser" />
+        <param name="map_topic" type="string" value="grid" />
+        <param name="map_resolution" type="double" value="0.05" />
         <param name="map_len" type="int" value="100" />
         <param name="obs_threshold" type="int" value="5" />
         <param name="delta_time" type="double" value="0.05" />

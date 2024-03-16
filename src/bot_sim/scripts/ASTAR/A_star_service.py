@@ -302,10 +302,10 @@ def response_function(msg):
     print("Planning")
     path_marker.points = []
     # sx, sy, _ = odom_subscriber.get_pose()
-    sx=msg.point1.x
-    sy=msg.point1.y
-    x_goal=msg.point2.x
-    y_goal=msg.point2.y
+    sx=msg.curr_x
+    sy=msg.curr_y
+    x_goal=msg.goal_x
+    y_goal=msg.goal_y
     rospy.loginfo("sx: %s, sy: %s", sx, sy)
     sx = sx - a_star.origin_x
     sy = sy - a_star.origin_y
@@ -314,6 +314,7 @@ def response_function(msg):
     rospy.loginfo("Astar Planning")
     rx, ry = a_star.planning(sx, sy, x_goal, y_goal)
     rospy.loginfo("Astar Planning Done")
+    path=[]
     for i in range(0,len(rx)):
         x=rx[i]
         y=ry[i]
@@ -326,10 +327,11 @@ def response_function(msg):
         else:
             p.z = 0
         path_marker.points.append(p)
+        path.append(p)
     Pointlist = AstarResponse()
-    Pointlist.marker = path_marker
-    path_pub.publish(Pointlist)
-    plan = False
+    Pointlist.path = path
+    path_pub.publish(path_marker)
+    return Pointlist
 if __name__ == '__main__':
     try:
         print("start")

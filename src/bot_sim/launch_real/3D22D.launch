@@ -10,16 +10,17 @@
         <rosparam>
             # target_frame: rslidar # Leave disabled to output scan in pointcloud frame
             transform_tolerance: 0.01
-            min_height: -3.0
-            max_height: 1.0
+            min_height: -10.0
+            max_height: 10.0
 
             angle_min: -3.1415926 # -M_PI
             angle_max: 3.1415926 # M_PI
-            angle_increment: 0.003 # 0.17degree
+            <!-- angle_increment: 0.003 # 0.17degree -->
+            angle_increment: 0.0035 # 0.17degree
             scan_time: 0.1
             range_min: 0.38
             range_max: 10
-            use_inf: false
+            use_inf: true
             inf_epsilon: 1.0
 
             # Concurrency level, affects number of pointclouds queued for processing and number of threads used

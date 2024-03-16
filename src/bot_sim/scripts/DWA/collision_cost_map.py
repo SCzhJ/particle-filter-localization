@@ -79,10 +79,12 @@ class CostMap:
 
 
 if __name__=="__main__":
-    rospy.init_node("cost_map_p")
+    node_name="collision_cost_map"
+    rospy.init_node(node_name)
 
     folder_path = "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/DWA/"
-    file_name = "CostMap/ceping0125"
+    map_path=rospy.get_param(node_name+"/map_path")
+    file_name = "CostMap/"+map_path
     cost_map = CostMap(robot_radius=0.3,a=2.5,b=1.8)
     cost_map.gen_cost_map()
     rospy.loginfo("cost map generated")

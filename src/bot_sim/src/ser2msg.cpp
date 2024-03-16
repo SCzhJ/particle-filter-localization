@@ -34,9 +34,8 @@ public:
         else if (buffer[0] == SOF && buffer[read_length-1] == eof) {
             memcpy(&this->relative_angle, &buffer[1], sizeof(float));
             memcpy(&this->imu_angle, &buffer[5], sizeof(float));
-            this->imu_angle += PI;
             buffer.erase(buffer.begin(), buffer.begin()+read_length);
-            ROS_INFO("Read from buffer");
+            // ROS_INFO("Read from buffer");
             return true;
         }
         else {
@@ -55,6 +54,8 @@ geometry_msgs::Twist cmd_vel;
 void cmdVelCallback(const geometry_msgs::Twist::ConstPtr &msg)
 {
     cmd_vel = *msg;
+    printf("msg_received");
+    std::cout<<cmd_vel.linear.x<<' '<<cmd_vel.linear.y<<std::endl;
 }
 
 int main(int argc, char** argv)
@@ -209,8 +210,8 @@ int main(int argc, char** argv)
         transformRotbaseToGimbal.transform.rotation.z = q2.z();
         transformRotbaseToGimbal.transform.rotation.w = q2.w();
         tfb.sendTransform(transformRotbaseToGimbal);
-
-
+        ros::spinOnce();
+        // printf("One while complite");
         rate.sleep();
     }
 

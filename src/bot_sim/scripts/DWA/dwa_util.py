@@ -94,6 +94,8 @@ class MapUtil:
     
     def subscribe_map(self, map_name: str):
         """Subscribe to the map."""
+        rospy.loginfo("subscribe to map: ")
+        rospy.loginfo(map_name)
         rospy.Subscriber(map_name, OccupancyGrid, self.map_callback)
     
     def map_callback(self, msg: OccupancyGrid):

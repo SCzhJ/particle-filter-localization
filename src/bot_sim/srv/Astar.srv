@@ -1,6 +1,9 @@
 # Request
-geometry_msgs/Point point1
-geometry_msgs/Point point2
+float32 curr_x
+float32 curr_y
+float32 goal_x
+float32 goal_y
 ---
 # Response
-visualization_msgs/Marker marker
+int32 success
+geometry_msgs/Point[] path

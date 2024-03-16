@@ -30,7 +30,7 @@ class CostFunction:
         # dynamic_obstacle_cost = k_d * (N - i) ^ m_d, where N is the number of points in the trajectory, 
         # i is the index of the first point to meet collision. No collision return 0
         self.k_d = 100
-        self.m_d = 1.5
+        self.m_d = 1.0
 
         # static_obstacle_cost = k_o * (N - i) ^ m_o, where N is the number of points in the trajectory, 
         # i is the index of the first point to meet collision. No collision return 0
@@ -103,8 +103,8 @@ class CostFunction:
                                                      copy.copy(robot_frame_traj[i][1][0]))
             occ_cost = self.dyn_obs_map_util.occupancy_value_check_grid_coord(x, y)
 
-            if occ_cost > 20:
-                return self.k_d * (occ_cost/100 * (len(robot_frame_traj) - i)) ** self.m_d
+            if occ_cost > 50:
+                return self.k_d * ((occ_cost/100 * (len(robot_frame_traj) - i)) ** self.m_d)
         return 0
     
     def static_obstacle_cost(self, traj_points: List, static_obs_iter: int) -> float:
@@ -125,7 +125,7 @@ class CostFunction:
         next_point: Point
         '''
         dist = np.sqrt((traj_points[path_follow_iter][0][0] - next_point.x) ** 2 + (traj_points[path_follow_iter][1][0] - next_point.y) ** 2)
-        return self.k_p * (dist/scaler) ** self.m_p
+        return self.k_p * (dist ** self.m_p)
     
     def turn_cost(self, traj_points: List, turn_iter: int) -> float:
         '''
