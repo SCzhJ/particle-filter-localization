@@ -78,7 +78,7 @@ class NavCtrl:
         # other
         self.cmd_publisher = rospy.Publisher(cmd_vel_topic, Twist, queue_size=10)
         self.dt = dt
-        self.vel_scaler = 4
+        self.vel_scaler = 2
         self.loc_tran = None
     
     def call_rrt_star(self, curr_x: float, curr_y: float, goal_x: float, goal_y: float):
@@ -161,6 +161,7 @@ class NavCtrl:
 
             rate = rospy.Rate(1/self.dt)
             vel = Twist()
+            scaler = self.vel_scaler
             while dist_to_goal > self.within_goal and not rospy.is_shutdown():
                 if self._as.is_preempt_requested():
                     rospy.loginfo('%s: Preempted' % self._action_name)
@@ -183,8 +184,12 @@ class NavCtrl:
                     best_traj_point_list.append(Point(point[0][0], point[1][0], 0.15))
                 best_traj_publisher.publish_point_list(best_traj_point_list)
 
-                vel.linear.x = x_vel/self.vel_scaler
-                vel.linear.y = -y_vel/self.vel_scaler
+                vel.linear.x = x_vel/scaler
+                vel.linear.y = -y_vel/scaler
+                # if next_point == Point(goal.goal_x, goal.goal_y, 0):
+                #     vel.linear.x = x_vel/scaler / 2
+                #     vel.linear.y = -y_vel/scaler/ 2
+
                 vel.angular.z = omega
                 self.cmd_publisher.publish(vel)
 
@@ -220,14 +225,14 @@ if __name__=="__main__":
     dt = 0.2
     # trajectories = TrajectoryMode.DifferentialDriveTrajectory(x_vel=0.5, omega_increment=0.1, num_of_traj_one_side=7) + \
     #     TrajectoryMode.DifferentialDriveTrajectory(x_vel=-0.5, omega_increment=0.1, num_of_traj_one_side=7)
-    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=20)
+    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=20) + TrajectoryMode.ShiftTrajectories(linear_vel=0.6, num_of_traj=15)
 
     for traj in trajectories:
-        TrajectoryMode.GenTrajectory(traj, 0.05, record_every_iter=1, iteration=5)
+        TrajectoryMode.GenTrajectory(traj, 0.05, record_every_iter=1, iteration=8)
     
     cost_map_path = rospy.get_param("~cost_map_path")
     dyn_map_name = rospy.get_param("~dyn_map_name")    
-    NavCtrl = NavCtrl(trajectories, cost_map_path, dyn_map_name, dt, traj_cut_percentage=0.4)
+    NavCtrl = NavCtrl(trajectories, cost_map_path, dyn_map_name, dt, traj_cut_percentage=0.1)
 
     rospy.spin()
     
