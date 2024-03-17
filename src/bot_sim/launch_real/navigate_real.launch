@@ -10,7 +10,7 @@
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find bot_sim)/config/rviz/gazebo_laserbot.rviz" />
 
   <node pkg="bot_sim" type="RRT_star_srv.py" name="RRT_star_srv">
-    <param name="map_name" type="string" value="RM_hall_Mar_16" />
+    <param name="map_name" type="string" value="Event_hall_Mar_17" />
   </node>
 
   <!-- <node pkg="bot_sim" type="wavefront" name="wavefront" output="screen">

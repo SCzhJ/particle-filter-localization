@@ -48,5 +48,5 @@ while not rospy.is_shutdown():
         clicked = False
         get_odom = False
     rate.sleep()
-    print("still_alive")
+    # print("still_alive")
 # print("while_complite")

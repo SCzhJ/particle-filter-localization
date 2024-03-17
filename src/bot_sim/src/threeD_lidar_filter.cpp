@@ -115,8 +115,12 @@ int main(int argc, char **argv)
             {
                 scan_new.points.push_back(scan_record_left.points[i]);
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
+                // if(nx*nx+ny*ny< 0.3){
+                //     printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, nz, nx*nx+ny*ny);
+                // }
             }
         }
+        // printf("________________________\n");
         for (int i = 0; i < scan_record_right.points.size(); i++)
         {
             double x = scan_record_right.points[i].x;
@@ -131,8 +135,14 @@ int main(int argc, char **argv)
             {
                 scan_new.points.push_back(scan_record_right.points[i]);
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
+                // if(nx*nx+ny*ny< 0.3){
+                //     printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, nz, nx*nx+ny*ny);
+                // }
             }
         }
+        // printf("________________________\n");
+        // printf("________________________\n");
+        // printf("________________________\n");
         scan_new.header.stamp = ros::Time::now();
         scan_new.point_num = scan_new.points.size();
         pub.publish(scan_new);

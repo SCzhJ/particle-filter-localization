@@ -68,7 +68,9 @@ class AStarPlanner:
                                self.calc_xy_index(sy, self.min_y), 0.0, -1)
         goal_node = self.Node(self.calc_xy_index(gx, self.min_x),
                               self.calc_xy_index(gy, self.min_y), 0.0, -1)
-
+        if(self.father[start_node.x*self.y_width+start_node.y]!=self.father[goal_node.x*self.y_width+goal_node.y]):
+            print("No path")
+            return [], []
         open_set, closed_set = dict(), dict()
         open_set[self.calc_grid_index(start_node)] = start_node
 
@@ -232,6 +234,8 @@ class AStarPlanner:
         self.obstacle_map = [[False for _ in range(self.y_width)]
                              for _ in range(self.x_width)]
                              # 获取当前的仿真时间
+        #并查集
+        self.father=[i for i in range(self.x_width*self.y_width)]
         sim_time = rospy.Time.now()
         print("Current simulation time: ", sim_time)
         rr=self.rr
@@ -261,7 +265,29 @@ class AStarPlanner:
         sim_time = rospy.Time.now()
         print("Current simulation time: ", sim_time)
 
+    def get_father(self,x):
+        if self.father[x]!=x:
+            self.father[x]=self.get_father(self.father[x])
+        return self.father[x]
 
+    def merge(self,x,y):
+        x=self.get_father(x)
+        y=self.get_father(y)
+        if x!=y:
+            self.father[x]=y
+    
+    def solve_the_equalvalence_class(self):
+        for i in range(self.x_width):
+            for j in range(self.y_width):
+                if not self.obstacle_map[i][j]:
+                    for k in range(8):
+                        ni=i+self.motion[k][0]
+                        nj=j+self.motion[k][1]
+                        if ni>=0 and ni<self.x_width and nj>=0 and nj<self.y_width and not self.obstacle_map[ni][nj]:
+                            self.merge(i*self.y_width+j,ni*self.y_width+nj)
+        for i in range(self.x_width):
+            for j in range(self.y_width):
+                self.get_father(i*self.y_width+j)
     
     def get_obstacle_coordinates(self):
         grid_map = self.map_util.get_map()
@@ -344,10 +370,9 @@ if __name__ == '__main__':
         print("a_star_init_done")
         a_star.get_obstacle_coordinates()
         a_star.calc_obstacle_map(a_star.ox, a_star.oy)
+        a_star.solve_the_equalvalence_class()
         path_pub = rospy.Publisher("path_marker", Marker, queue_size=10)
         print("init_started")
-
-        odom_subscriber = OdomSubscriber()
         print("init_done")
         # Marker params
         marker = Marker()

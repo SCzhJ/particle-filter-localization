@@ -165,22 +165,3 @@ class MapUtil:
         self.origin = response.map.info.origin
         self.origin_x = response.map.info.origin.position.x
         self.origin_y = response.map.info.origin.position.y
-class OdomSubscriber:
-    def __init__(self):
-        self.odom_sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
-        self.robot_pose = None
-
-    def odom_callback(self, msg):
-        self.robot_pose = msg.pose.pose
-
-    def get_pose(self):
-        if self.robot_pose is None:
-            return None, None, None
-        x = self.robot_pose.position.x
-        y = self.robot_pose.position.y
-        rospy.loginfo("get information: x %s y %s", x, y)
-        theta = euler_from_quaternion([self.robot_pose.orientation.x, 
-                                       self.robot_pose.orientation.y, 
-                                       self.robot_pose.orientation.z, 
-                                       self.robot_pose.orientation.w])[2]
-        return x, y, theta

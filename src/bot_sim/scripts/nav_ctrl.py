@@ -225,7 +225,7 @@ if __name__=="__main__":
     dt = 0.2
     # trajectories = TrajectoryMode.DifferentialDriveTrajectory(x_vel=0.5, omega_increment=0.1, num_of_traj_one_side=7) + \
     #     TrajectoryMode.DifferentialDriveTrajectory(x_vel=-0.5, omega_increment=0.1, num_of_traj_one_side=7)
-    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=20) + TrajectoryMode.ShiftTrajectories(linear_vel=0.6, num_of_traj=15)
+    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.6, num_of_traj=30) + TrajectoryMode.ShiftTrajectories(linear_vel=1.2, num_of_traj=25) + TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=20) + TrajectoryMode.ShiftTrajectories(linear_vel=0.6, num_of_traj=15) + TrajectoryMode.ShiftTrajectories(linear_vel=0.4, num_of_traj=10)
 
     for traj in trajectories:
         TrajectoryMode.GenTrajectory(traj, 0.05, record_every_iter=1, iteration=8)
