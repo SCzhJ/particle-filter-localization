@@ -1,5 +1,5 @@
 <launch>
-    <node name="ser2msg" pkg="bot_sim" type="ser2msg" output="screen">
+    <node name="ser2msg" pkg="bot_sim" type="ser2msg" >
         <param name="serial_port" type="string" value="/dev/ttyACM0" />
         <param name="virtual_frame" type="string" value="virtual_frame" />
         <param name="rotbase_frame" type="string" value="rotbase_frame" />
