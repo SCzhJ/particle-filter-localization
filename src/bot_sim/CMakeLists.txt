@@ -22,6 +22,7 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   actionlib_msgs
   livox_ros_driver2
+  dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
@@ -61,6 +62,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   TwoPoints.msg
+  Angles.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -84,6 +86,9 @@ add_message_files(
    actionlib_msgs
    visualization_msgs
  )
+ generate_dynamic_reconfigure_options(
+  cfg/test.cfg
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -116,8 +121,8 @@ add_message_files(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-LIBRARIES ${PROJECT_NAME}
-CATKIN_DEPENDS roscpp rospy std_msgs urdf xacro serial actionlib actionlib_msgs message_runtime
+# LIBRARIES ${PROJECT_NAME}
+CATKIN_DEPENDS roscpp rospy std_msgs urdf xacro serial actionlib actionlib_msgs message_runtime dynamic_reconfigure
 #  DEPENDS system_lib
 )
 
@@ -130,6 +135,7 @@ CATKIN_DEPENDS roscpp rospy std_msgs urdf xacro serial actionlib actionlib_msgs 
 include_directories(
 include
   ${catkin_INCLUDE_DIRS}
+  ${dynamic_reconfigure_PACKAGE_PATH}/cfg/cpp
 )
 
 ## Declare a C++ library
@@ -154,6 +160,9 @@ add_executable(test_transform src/test_transform.cpp)
 add_executable(lidar_filter src/lidar_filter.cpp)
 add_executable(threeD_lidar_filter src/threeD_lidar_filter.cpp)
 add_executable(dbscan_bfs src/dbscan_bfs.cpp)
+add_executable(dbscan_bfs_3D src/dbscan_bfs_3D.cpp)
+add_executable(threeD_lidar_test src/threeD_lidar_test.cpp)
+add_executable(ser2msg_write_only src/ser2msg_write_only.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -190,10 +199,20 @@ target_link_libraries(threeD_lidar_filter
 target_link_libraries(dbscan_bfs
   ${catkin_LIBRARIES}
 )
+target_link_libraries(dbscan_bfs_3D
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(threeD_lidar_test
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(ser2msg_write_only
+  ${catkin_LIBRARIES}
+)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(real_robot_transform ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
+add_dependencies(threeD_lidar_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(ser2msg_write_only ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #############
 ## Install ##
 #############3D_lidar_filteration

@@ -10,11 +10,18 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <math.h>
+#include <ros/ros.h>
+#include <dynamic_reconfigure/server.h>
+#include <bot_sim/testConfig.h>
 
-double first_RADIUS;
-double second_RADIUS, slope, max_height, start_height;
 
+float RADIUS, max_z, min_z;
+
+void callback(bot_sim::testConfig &config, uint32_t level) {
+    RADIUS=config.radius;
+    max_z=config.max_z;
+    min_z=config.min_z;
+}
 bool get_msg = 0;
 std::string base_frame;
 std::string laser_frame;
@@ -35,30 +42,23 @@ void scanCallback_right(const livox_ros_driver2::CustomMsg &scan)
     scan_copy_right = scan;
     get_msg = 1;
 }
-double max_dis=0;
+double max_dis=0,max_height=0;
 std::vector<double> distances;
 bool satisfied(double nx, double ny, double z){
-    if(nx*nx+ny*ny <= first_RADIUS*first_RADIUS){
-        // if(z>0.1)printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
-        return 0;
-    }
-    if(nx*nx+ny*ny <= second_RADIUS*second_RADIUS){
-        // printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
-        if(0.3<=z&&z<=0.35){
-            distances.push_back(nx*nx+ny*ny);
-            max_dis=std::max(max_dis,nx*nx+ny*ny);
-            // printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
-        }
-        return z<=start_height;
-    }
-    double dis=sqrt(nx*nx+ny*ny)-second_RADIUS;
-    return z<=std::min(max_height,dis*slope+start_height);
+
+    max_dis=std::max(max_dis,z);
+    return nx*nx+ny*ny<=RADIUS*RADIUS && min_z<=z&&z<=max_z;
 }
+
 int main(int argc, char **argv)
 {
-    std::string node_name = "threeD_lidar_filter";
+    std::string node_name = "threeD_lidar_test";
     ros::init(argc, argv, node_name);
     ros::NodeHandle nh;
+    dynamic_reconfigure::Server<bot_sim::testConfig> server;
+    dynamic_reconfigure::Server<bot_sim::testConfig>::CallbackType f;
+    f = boost::bind(&callback, _1, _2);
+    server.setCallback(f);
 
     if (!nh.getParam("/" + node_name + "/base_frame", base_frame))
     {
@@ -83,31 +83,6 @@ int main(int argc, char **argv)
     if (!nh.getParam("/" + node_name + "/new_scan_topic", new_scan_topic))
     {
         ROS_ERROR("Failed to retrieve parameter 'new_scan_topic'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/first_RADIUS", first_RADIUS))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'first_RADIUS'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/second_RADIUS", second_RADIUS))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'second_RADIUS'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/max_height", max_height))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'max_height'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/start_height", start_height))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'start_height'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/slope", slope))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'slope'");
         return -1;
     }
 
@@ -157,7 +132,6 @@ int main(int argc, char **argv)
             double nx = point_out.x();
             double ny = point_out.y();
             double nz = point_out.z();
-            if (satisfied(nx,ny,z))
             if (satisfied(nx,ny,z))
             {
                 scan_new.points.push_back(scan_record_left.points[i]);

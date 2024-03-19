@@ -5,7 +5,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
-
+#include <bot_sim/Angles.h>
 const double PI = 3.14159265358979323846;
 
 serial::Serial ser;
@@ -16,7 +16,8 @@ union FloatToByte{
     float f;
     uint8_t bytes[sizeof(float)];
 };
-
+float imu_record;
+float relative_record;
 class Message {
 public:
     static const uint8_t SOF = 0xFF;
@@ -27,23 +28,6 @@ public:
     // float past_relative_angle;
     float imu_angle;
     float relative_angle;
-    bool readFromBuffer(std::vector<uint8_t>& buffer) {
-        if (buffer.size() < read_length) {
-            return false; // Not enough data, 
-        }
-        else if (buffer[0] == SOF && buffer[read_length-1] == eof) {
-            memcpy(&this->relative_angle, &buffer[1], sizeof(float));
-            memcpy(&this->imu_angle, &buffer[5], sizeof(float));
-            this->imu_angle += PI;
-            buffer.erase(buffer.begin(), buffer.begin()+read_length);
-            ROS_INFO("Read from buffer");
-            return true;
-        }
-        else {
-            buffer.erase(buffer.begin());
-            return true; // Format dismatch, drop the first byte and try again 
-        }
-    }
     void printData() {
         ROS_INFO_STREAM("imu_angle: " << this->imu_angle);
         ROS_INFO_STREAM("relative_angle: " << this->relative_angle);
@@ -56,15 +40,21 @@ void cmdVelCallback(const geometry_msgs::Twist::ConstPtr &msg)
 {
     cmd_vel = *msg;
     printf("msg_received");
+    std::cout<<cmd_vel.linear.x<<' '<<cmd_vel.linear.y<<std::endl;
+}
+void angleCallback(const bot_sim::Angles::ConstPtr &msg)
+{
+    imu_record = msg->imu_angle;
+    relative_record = msg->relative_angle;
+    // printf("msg_received");
+    // std::cout<<cmd_vel.linear.x<<' '<<cmd_vel.linear.y<<std::endl;
 }
 
 int main(int argc, char** argv)
 {
-    std::string node_name = "ser2msg";
+    std::string node_name = "ser2msg_write_only";
     ros::init(argc, argv, node_name);
-
     ros::NodeHandle nh;
-
     std::string serial_port;
     if (!nh.getParam("/"+node_name+"/serial_port", serial_port))
     {
@@ -99,8 +89,12 @@ int main(int argc, char** argv)
     if (!nh.getParam("/"+node_name+"/vel_topic",vel_topic)){
     	ROS_ERROR("Failed to get param: %s", vel_topic.c_str());
     }
+    std::string angle_topic;
+    if(!nh.getParam("/"+node_name+"/topic_name",angle_topic)){
+    	ROS_ERROR("Failed to get param: %s", angle_topic.c_str());
+    }
 
-    message.setTransform(virtual_frame, rotbase_frame);
+    // message.setTransform(virtual_frame, rotbase_frame);
 
     try
     {
@@ -132,7 +126,8 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    ros::Subscriber sub = nh.subscribe(vel_topic, 1000, cmdVelCallback);
+    ros::Subscriber sub_vel = nh.subscribe(vel_topic, 1000, cmdVelCallback);
+    ros::Subscriber sub_angle = nh.subscribe(angle_topic, 1000, angleCallback);
 
     tf2_ros::TransformBroadcaster tfb;
     geometry_msgs::TransformStamped transformVirtualtoRotbase;
@@ -152,29 +147,15 @@ int main(int argc, char** argv)
     transformRotbaseToGimbal.transform.translation.z = -0.3;
 
     Message message;
-    std::vector<uint8_t> buffer_recv;
     uint8_t byte;
     uint8_t buffer_send[read_length];
     buffer_send[0] = 0x4A; // SOF
     ros::Rate rate = ros::Rate(1/delta_time);
     while(ros::ok()){
-
-        // Read data from the serial port
-        buffer_recv.clear();
-        size_t bytes_available = ser.available();
-        if (bytes_available < read_length) {
-            // ROS_WARN("Not enough data available from the serial port");
-        }
-        else{
-            while (ser.available())
-            {
-                ser.read(&byte,1);
-                buffer_recv.push_back(byte);
-            }
-            while (message.readFromBuffer(buffer_recv));
-            message.printData();
-        }
-
+        // Read data from topic
+        message.imu_angle = imu_record;
+        message.relative_angle = relative_record;
+        message.printData();
         // Write data to serial port
         // Linear velocities x
         FloatToByte linear_x;
@@ -210,8 +191,8 @@ int main(int argc, char** argv)
         transformRotbaseToGimbal.transform.rotation.z = q2.z();
         transformRotbaseToGimbal.transform.rotation.w = q2.w();
         tfb.sendTransform(transformRotbaseToGimbal);
-
-
+        ros::spinOnce();
+        // printf("One while complite");
         rate.sleep();
     }
 

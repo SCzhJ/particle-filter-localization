@@ -10,10 +10,9 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <math.h>
 
-double first_RADIUS;
-double second_RADIUS, slope, max_height, start_height;
+float first_RADIUS, first_DEP;
+float second_RADIUS, second_DEP;
 
 bool get_msg = 0;
 std::string base_frame;
@@ -35,7 +34,7 @@ void scanCallback_right(const livox_ros_driver2::CustomMsg &scan)
     scan_copy_right = scan;
     get_msg = 1;
 }
-double max_dis=0;
+double max_dis=0,max_height=0;
 std::vector<double> distances;
 bool satisfied(double nx, double ny, double z){
     if(nx*nx+ny*ny <= first_RADIUS*first_RADIUS){
@@ -49,10 +48,9 @@ bool satisfied(double nx, double ny, double z){
             max_dis=std::max(max_dis,nx*nx+ny*ny);
             // printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
         }
-        return z<=start_height;
+        return z<=first_DEP;
     }
-    double dis=sqrt(nx*nx+ny*ny)-second_RADIUS;
-    return z<=std::min(max_height,dis*slope+start_height);
+    return z<=second_DEP;
 }
 int main(int argc, char **argv)
 {
@@ -95,19 +93,14 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to retrieve parameter 'second_RADIUS'");
         return -1;
     }
-    if (!nh.getParam("/" + node_name + "/max_height", max_height))
+    if (!nh.getParam("/" + node_name + "/first_DEP", first_DEP))
     {
-        ROS_ERROR("Failed to retrieve parameter 'max_height'");
+        ROS_ERROR("Failed to retrieve parameter 'first_DEP'");
         return -1;
     }
-    if (!nh.getParam("/" + node_name + "/start_height", start_height))
+    if (!nh.getParam("/" + node_name + "/second_DEP", second_DEP))
     {
-        ROS_ERROR("Failed to retrieve parameter 'start_height'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/slope", slope))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'slope'");
+        ROS_ERROR("Failed to retrieve parameter 'second_DEP'");
         return -1;
     }
 
