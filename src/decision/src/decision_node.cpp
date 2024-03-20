@@ -12,7 +12,7 @@ ros::Publisher pub;
 
 std::vector<decision::Armor> armors;
 decision::Target target;
-decision::GameStats gamestats;
+decision::GameStats game_stats;
 
 typedef actionlib::SimpleActionClient<bot_sim::NavActionAction> NavClient;
 
@@ -22,6 +22,12 @@ enum class DecisionState {
     HEALING,
     RETURNING
 };
+
+struct Events {
+    bool captured_supply;
+    bool captured_central_buff;
+    bool opponent_captured_central_buff;
+} game_events;
 
 void armorCallback(const decision::Armors::ConstPtr& armors_msg)
 {
@@ -84,7 +90,7 @@ bool runningOutOfBullets(){
     return false;
     // time in minutes
     int bullet_number = 750; // bullets
-    double time = gamestats.stage_remain_time / 60.0;
+    double time = game_stats.stage_remain_time / 60.0;
     if (bullet_number < 0.7 * (750 - 150 * (time + 1.0))){
         return true; 
     } else {
@@ -149,7 +155,13 @@ uint32 event_data*/
     // ROS_INFO("buffer: %f", gamestats_msg->buffer);
     // ROS_INFO("bullet_speed: %f", gamestats_msg->bullet_speed);
     // ROS_INFO("shooter_speed_limit: %d", gamestats_msg->shooter_speed_limit);
-    gamestats = *gamestats_msg;
+    game_stats = *gamestats_msg;
+    game_events.captured_supply = (game_stats.event_data >> 2) & 1;
+    game_events.captured_central_buff = (game_stats.event_data >> 30) & 1;
+    game_events.opponent_captured_central_buff = (game_stats.event_data >> 31) & 1;
+    ROS_INFO("Captured supply: %d", game_events.captured_supply);
+    ROS_INFO("Captured central buff: %d", game_events.captured_central_buff);
+    ROS_INFO("Opponent captured central buff: %d", game_events.opponent_captured_central_buff);
 }
 
 int main(int argc, char **argv)
@@ -240,11 +252,11 @@ int main(int argc, char **argv)
             decision_state = DecisionState::RETURNING;
         }
 
-        if (decision_state == DecisionState::HEALING && gamestats.remain_hp >= hp_before_returning) {
+        if (decision_state == DecisionState::HEALING && game_stats.remain_hp >= hp_before_returning) {
             decision_state = DecisionState::PATROLLING;
         }
 
-        if (decision_state == DecisionState::RETURNING && gamestats.remain_hp >= hp_before_returning && !runningOutOfBullets()) {
+        if (decision_state == DecisionState::RETURNING && game_stats.remain_hp >= hp_before_returning && !runningOutOfBullets()) {
             decision_state = DecisionState::PATROLLING;
         }
 
