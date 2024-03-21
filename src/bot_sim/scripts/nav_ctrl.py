@@ -99,7 +99,7 @@ class NavCtrl:
     def update_location(self):
         try:
             self.loc_tran = self.tf_buffer.lookup_transform(self.world_frame, self.robot_frame,
-                                                    rospy.Time.now(), rospy.Duration(1.0))#写成两个param
+                                                    rospy.Time.now(), rospy.Duration(10.0))#写成两个param
             for traj in self.trajectories:
                 traj.CalcWorldFramePoses(self.loc_tran.transform)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):

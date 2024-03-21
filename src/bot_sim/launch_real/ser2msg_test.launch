@@ -1,4 +1,5 @@
 <launch>
+    <param name="use_sim_time" value="false"/>
 
     <node name="ser2msg" pkg="bot_sim" type="ser2msg" output="screen">
         <param name="serial_port" type="string" value="/dev/ttyACM0" />

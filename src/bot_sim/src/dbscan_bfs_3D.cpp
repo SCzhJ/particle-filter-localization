@@ -31,7 +31,7 @@ extern int max_radar_y;
 extern int min_radar_x;
 extern int min_radar_y;
 int obstacle_enlargement=4;
-int MAXN=50;
+int MAXN=100;
 //bfs方向数组
 int dx[4] = {0, 0, 1, -1};
 int dy[4] = {1, -1, 0, 0};
@@ -265,7 +265,7 @@ int main(int argc, char **argv)
     while(ros::ok){
         if(get_scan){
             auto start_ = std::chrono::high_resolution_clock::now();
-            printf("get_scan");
+            // printf("get_scan");
             // 声明grid变量
             nav_msgs::OccupancyGrid grid;
 
@@ -367,7 +367,7 @@ int main(int argc, char **argv)
             auto end_ = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> diff = end_-start_;
 
-            std::cout << "Time difference: " << diff.count() << " s\n";
+            // std::cout << "Time difference: " << diff.count() << " s\n";
             grid_pub.publish(grid);
             get_scan=0;
         }

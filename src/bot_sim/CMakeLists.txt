@@ -163,6 +163,7 @@ add_executable(dbscan_bfs src/dbscan_bfs.cpp)
 add_executable(dbscan_bfs_3D src/dbscan_bfs_3D.cpp)
 add_executable(threeD_lidar_test src/threeD_lidar_test.cpp)
 add_executable(ser2msg_write_only src/ser2msg_write_only.cpp)
+add_executable(transform_listener src/transform_listener.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -206,6 +207,9 @@ target_link_libraries(threeD_lidar_test
   ${catkin_LIBRARIES}
 )
 target_link_libraries(ser2msg_write_only
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(transform_listener
   ${catkin_LIBRARIES}
 )
 ## Add cmake target dependencies of the executable
