@@ -1,7 +1,7 @@
 <launch>
-    <arg name="map" default="Event_hall_Mar_19.map.yaml" />
+    <arg name="map" default="RMUL.yaml" />
     <node name="map_server" pkg="map_server" type="map_server" args="$(find bot_sim)/map/$(arg map)"/>
     <node pkg="bot_sim" type="collision_cost_map.py" name="collision_cost_map" output="screen">
-        <param name="map_path" type="string" value="Event_hall_Mar_19"/>
+        <param name="map_path" type="string" value="RMUL"/>
     </node>
 </launch>

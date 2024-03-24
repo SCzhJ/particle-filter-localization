@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="bot_sim" type="NavClient.py" name="NavClient" output="screen" />
+
+</launch>

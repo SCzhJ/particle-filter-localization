@@ -25,14 +25,17 @@
   <!-- <param name="laser_model_type" value="beam"/> -->
   <param name="laser_likelihood_max_dist" value="15.0"/>
   <param name="update_min_d" value="0.03"/>
-  <param name="update_min_a" value="0.07"/>
+  <param name="upda te_min_a" value="0.07"/>
 
   <param name="odom_frame_id" value="camera_init"/>
-  <param name="base_frame_id" value="virtual_frame"/>
+  <param name="base_frame_id" value="gimbal_frame"/>
   <param name="global_frame_id" value="map"/>
 
+  <param name="initial_pose_x" type="double" value="-2.2" />
+  <param name="initial_pose_y" type="double" value="0.5" />
+
   <param name="resample_interval" value="2"/>
-  <param name="transform_tolerance" value="0.2"/>
+  <param name="transform_tolerance" value="0.1"/>
   <param name="recovery_alpha_slow" value="0.0"/>
   <param name="recovery_alpha_fast" value="0.0"/>
 </node>

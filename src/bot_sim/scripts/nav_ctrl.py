@@ -33,7 +33,7 @@ class NavCtrl:
     def __init__(self, trajectories: List[trajObject], cost_map_path: str, dyn_map_name: str,
                  dt: float, traj_cut_percentage: float = 0.5, iter_percentage: float = 0.5,
                  pathfollowext_percentage: float = 0.8, cmd_vel_topic: str = "/cmd_vel",
-                 within_point: float = 0.7, within_goal: float = 0.5, cost_method: str = "omni"):
+                 within_point: float = 0.9, within_goal: float = 0.3, cost_method: str = "omni"):
         self._action_name = "nav_ctrl"
         self._as = actionlib.SimpleActionServer(self._action_name, NavActionAction, execute_cb=self.nav_to_goal, auto_start = False)
         self._as.start()
@@ -143,8 +143,11 @@ class NavCtrl:
                                      (goal.goal_y - self.loc_tran.transform.translation.y)**2)
             dist_to_goal = zero_progress
             
-        path_get = self.call_rrt_star(self.loc_tran.transform.translation.x, 
-                                      self.loc_tran.transform.translation.y, goal.goal_x, goal.goal_y)
+        # path_get = self.call_rrt_star(self.loc_tran.transform.translation.x, 
+        #                                self.loc_tran.transform.translation.y, goal.goal_x, goal.goal_y)
+        path_get = 1
+        self.path = [Point(goal.goal_x, goal.goal_y, 0)]
+        self.path_len = 1
         if path_get != 1:
             rospy.logerr("path not found")
             return -1

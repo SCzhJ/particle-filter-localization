@@ -4,13 +4,22 @@
 #include <algorithm>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 const double PI = 3.14159265358979323846;
 
 serial::Serial ser;
 const int write_length = 13;
 const int read_length = 10;
+
+geometry_msgs::TransformStamped transformRotbaseToVirtual;
+geometry_msgs::TransformStamped transformGimbalToRotbase;
+geometry_msgs::TransformStamped transformMapToGimbal;
+geometry_msgs::TransformStamped loc;
+
 
 union FloatToByte{
     float f;
@@ -55,7 +64,7 @@ void cmdVelCallback(const geometry_msgs::Twist::ConstPtr &msg)
 {
     cmd_vel = *msg;
     printf("msg_received");
-    std::cout<<cmd_vel.linear.x<<' '<<cmd_vel.linear.y<<std::endl;
+    // std::cout<<cmd_vel.linear.x<<' '<<cmd_vel.linear.y<<std::endl;
 }
 
 int main(int argc, char** argv)
@@ -99,6 +108,12 @@ int main(int argc, char** argv)
     if (!nh.getParam("/"+node_name+"/vel_topic",vel_topic)){
     	ROS_ERROR("Failed to get param: %s", vel_topic.c_str());
     }
+    std::string _3DLidar_frame;
+    if (!nh.getParam("/"+node_name+"/_3DLidar_frame", _3DLidar_frame))
+    {
+        ROS_ERROR("Failed to retrieve parameter '_3DLidar_frame'");
+        return -1;
+    }
 
     // message.setTransform(virtual_frame, rotbase_frame);
 
@@ -135,21 +150,24 @@ int main(int argc, char** argv)
     ros::Subscriber sub = nh.subscribe(vel_topic, 1000, cmdVelCallback);
 
     tf2_ros::TransformBroadcaster tfb;
-    geometry_msgs::TransformStamped transformVirtualtoRotbase;
-    tf2::Quaternion q1;
-    transformVirtualtoRotbase.header.frame_id = rotbase_frame;
-    transformVirtualtoRotbase.child_frame_id = virtual_frame;
-    transformVirtualtoRotbase.transform.translation.x = 0.0;
-    transformVirtualtoRotbase.transform.translation.y = 0.0;
-    transformVirtualtoRotbase.transform.translation.z = -0.1;
 
-    geometry_msgs::TransformStamped transformRotbaseToGimbal;
+    tf2_ros::Buffer tfBuffer;
+    tf2_ros::TransformListener tfListener(tfBuffer);
+    
+    tf2::Quaternion q1;
+    transformRotbaseToVirtual.header.frame_id = rotbase_frame;
+    transformRotbaseToVirtual.child_frame_id = virtual_frame;
+    transformRotbaseToVirtual.transform.translation.x = 0.0;
+    transformRotbaseToVirtual.transform.translation.y = 0.0;
+    transformRotbaseToVirtual.transform.translation.z = -0.1;
+
+    
     tf2::Quaternion q2;
-    transformRotbaseToGimbal.header.frame_id = gimbal_frame;
-    transformRotbaseToGimbal.child_frame_id = rotbase_frame;
-    transformRotbaseToGimbal.transform.translation.x = 0.0;
-    transformRotbaseToGimbal.transform.translation.y = 0.0;
-    transformRotbaseToGimbal.transform.translation.z = -0.3;
+    transformGimbalToRotbase.header.frame_id = gimbal_frame;
+    transformGimbalToRotbase.child_frame_id = rotbase_frame;
+    transformGimbalToRotbase.transform.translation.x = 0.0;
+    transformGimbalToRotbase.transform.translation.y = 0.0;
+    transformGimbalToRotbase.transform.translation.z = -0.3;
 
     Message message;
     std::vector<uint8_t> buffer_recv;
@@ -157,6 +175,15 @@ int main(int argc, char** argv)
     uint8_t buffer_send[read_length];
     buffer_send[0] = 0x4A; // SOF
     ros::Rate rate = ros::Rate(1/delta_time);
+
+    tf2::Transform gimbalframe;
+    tf2::Transform rotbaseframe;
+    tf2::Transform virtualframe;
+    tf2::Transform location;
+
+    loc.header.frame_id = "map";
+    loc.child_frame_id = virtual_frame;
+
     while(ros::ok()){
 
         // Read data from the serial port
@@ -172,7 +199,7 @@ int main(int argc, char** argv)
                 buffer_recv.push_back(byte);
             }
             while (message.readFromBuffer(buffer_recv));
-            message.printData();
+            // message.printData();
         }
 
         // Write data to serial port
@@ -195,27 +222,40 @@ int main(int argc, char** argv)
             ROS_ERROR("Failed to write all bytes to the serial port");
         }
 
-        transformVirtualtoRotbase.header.stamp = ros::Time::now();
         q1.setRPY(0,0,-message.imu_angle);
-        transformVirtualtoRotbase.transform.rotation.x = q1.x();
-        transformVirtualtoRotbase.transform.rotation.y = q1.y();
-        transformVirtualtoRotbase.transform.rotation.z = q1.z();
-        transformVirtualtoRotbase.transform.rotation.w = q1.w();
-        tfb.sendTransform(transformVirtualtoRotbase);
+        transformRotbaseToVirtual.transform.rotation.x = q1.x();
+        transformRotbaseToVirtual.transform.rotation.y = q1.y();
+        transformRotbaseToVirtual.transform.rotation.z = q1.z();
+        transformRotbaseToVirtual.transform.rotation.w = q1.w();
+        transformRotbaseToVirtual.header.stamp = ros::Time::now();
+        // tfb.sendTransform(transformRotbaseToVirtual);
 
-        transformRotbaseToGimbal.header.stamp = ros::Time::now();
         q2.setRPY(0,0,-message.relative_angle);
-        transformRotbaseToGimbal.transform.rotation.x = q2.x();
-        transformRotbaseToGimbal.transform.rotation.y = q2.y();
-        transformRotbaseToGimbal.transform.rotation.z = q2.z();
-        transformRotbaseToGimbal.transform.rotation.w = q2.w();
-        tfb.sendTransform(transformRotbaseToGimbal);
+        transformGimbalToRotbase.transform.rotation.x = q2.x();
+        transformGimbalToRotbase.transform.rotation.y = q2.y();
+        transformGimbalToRotbase.transform.rotation.z = q2.z();
+        transformGimbalToRotbase.transform.rotation.w = q2.w();
+        transformGimbalToRotbase.header.stamp = ros::Time::now();
+        // tfb.sendTransform(transformGimbalToRotbase);
+
+        try{
+            transformMapToGimbal = tfBuffer.lookupTransform("map", "gimbal_frame",ros::Time(0),ros::Duration(5.0));
+        }
+        catch(tf2::TransformException &ex){
+            ROS_WARN("%s",ex.what());
+        }
+        tf2::fromMsg(transformMapToGimbal.transform, gimbalframe);
+        tf2::fromMsg(transformGimbalToRotbase.transform,rotbaseframe);
+        tf2::fromMsg(transformRotbaseToVirtual.transform,virtualframe);
+        // location = gimbalframe;
+        // // * rotbaseframe * virtualframe;
+        location = gimbalframe * rotbaseframe * virtualframe;
+        loc.transform = tf2::toMsg(location);
+        loc.header.stamp = ros::Time::now();
+        tfb.sendTransform(loc);
         ros::spinOnce();
-        // printf("One while complite");
         rate.sleep();
     }
-
     ros::spin();
-
     return 0;
 }

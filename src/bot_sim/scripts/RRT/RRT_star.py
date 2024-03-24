@@ -20,13 +20,13 @@ class RRT_Star:
         self.normal_sigma = 0.7
         self.normal_enlargement = 15
         self.max_iter = 10000
-        self.step_size = 0.5
+        self.step_size = 0.2
         self.gamma     = 4
         self.eta       = 0.4 * self.gamma
         self.d         = 2
         self.default_goal_radius = 1.0
         self.goal_radius = self.default_goal_radius
-        self.max_search_iter = 1000
+        self.max_search_iter = 10000
         self.coll_step= 0.1
         self.tree = TreeUtil(q_init)
         self.obstacle_enlargement_tolerance_range = 2.0
