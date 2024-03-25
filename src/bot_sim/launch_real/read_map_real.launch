@@ -1,4 +1,5 @@
 <launch>
-    <arg name="map" default="cky.map.yaml" />
+    <param name="use_sim_time" value="false"/>
+    <arg name="map" default="hotel.map.yaml" />
     <node name="map_server" pkg="map_server" type="map_server" args="$(find bot_sim)/map/$(arg map)"/>
 </launch>

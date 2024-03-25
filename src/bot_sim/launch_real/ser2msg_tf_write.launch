@@ -9,11 +9,4 @@
         <param name="vel_topic" type="string" value="/cmd_vel" />
         <param name="topic_name" type="string" value="/angle_topic" />
     </node>
-    
-    <!-- <node name="real_robot_transform" pkg="bot_sim" type="real_robot_transform" >
-        <param name="gimbal_frame" type="string" value="gimbal_frame" />
-        <param name="_3DLidar_frame" type="string" value="aft_mapped" />
-        <param name="g_frame" type="string" value="temp_frame" />
-        <param name="v_frame" type="string" value="nothing_frame" />
-    </node> -->
 </launch>

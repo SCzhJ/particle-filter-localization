@@ -3,7 +3,8 @@
   <node pkg="bot_sim" type="nav_ctrl.py" name="nav_ctrl" output="screen" >
     <param name="world_frame" value="map"/>
     <param name="robot_frame" value="virtual_frame"/>
-    <param name="cost_map_path" value="/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/DWA/CostMap/RMUL" />
+    <param name="cost_map_path"
+    value="/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/DWA/CostMap/hotel" />
     <param name="dyn_map_name" value="/grid"/>
   </node>
 

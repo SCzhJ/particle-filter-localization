@@ -1,4 +1,5 @@
 <launch>
+    <param name="use_sim_time" value="false"/>
     <node pkg = "bot_sim" type = "A_star_service.py" name = "A_star_service" output="screen"/>
     <node pkg = "bot_sim" type = "A_star_client.py" name = "A_star_client" output = "screen">
         <param name = "odom_name" type = "string" value = "/aft_mapped_to_init"/>
