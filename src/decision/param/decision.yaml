@@ -1,6 +1,6 @@
-patrol_path: [[-2., -0.5], [1., -0.6], [1., 3.5], [4., 2.4], [4., -0.5], [1., -0.6], [1., 3.5], [-2., 4.]]
+patrol_path: [[-2., -0.5], [1., -1.1], [3., -1.5], [1., -1.1]]
 control_location: [1., -0.6]
 base_location: [-2.2, 0.5]
 supplies_location: [3., 1.]
-mode: 2
-hp_before_returning: 300
+mode: 1
+hp_before_returning: 0
