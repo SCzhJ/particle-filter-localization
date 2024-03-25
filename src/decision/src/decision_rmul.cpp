@@ -14,7 +14,6 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <chrono>
 
 ros::Publisher pub;
 
@@ -22,7 +21,6 @@ std::vector<decision::Armor> armors;
 decision::Target target;
 decision::GameStats game_stats;
 geometry_msgs::Point position;
-int last_hp;
 
 typedef actionlib::SimpleActionClient<bot_sim::NavActionAction> NavClient;
 
@@ -140,11 +138,10 @@ int getNearestWaypoint(const std::vector<std::vector<double>> & patrol_path, con
 
 void gamestatsCallback(const decision::GameStats::ConstPtr& gamestats_msg)
 {
-    // std::cout << "Game time: " << gamestats_msg->game_type << std::endl;
-    // std::cout << "Game progress: " << gamestats_msg->game_progress << std::endl;
-    // ROS_INFO("game_type: %d", gamestats_msg->game_type);
-    // ROS_INFO("remain_hp: %d", gamestats_msg->remain_hp);
-    // ROS_INFO("max_hp: %d", gamestats_msg->max_hp);;
+    ROS_INFO("Received game statistics:");
+    ROS_INFO("game_type: %d", gamestats_msg->game_type);
+    ROS_INFO("remain_hp: %d", gamestats_msg->remain_hp);
+    ROS_INFO("max_hp: %d", gamestats_msg->max_hp);;
     game_stats = *gamestats_msg;
     game_events.captured_supply = (game_stats.event_data >> 2) & 1;
     game_events.captured_central_buff = (game_stats.event_data >> 30) & 1;
@@ -174,28 +171,10 @@ int main(int argc, char **argv)
         patrol_path.push_back(point);
     }
 
-    XmlRpc::XmlRpcValue control_location_list;
-    std::vector<double> control_location;
-    if (!n.getParam("control_location", control_location_list)) {
-        ROS_ERROR("Failed to get param 'control_location'");
-    }
-    for(int i = 0; i < control_location_list.size(); i++)
-    {
-        std::cout << control_location_list[i] << std::endl;
-        control_location.push_back(static_cast<double>(control_location_list[i]));
-    }
-
     int hp_before_returning;
     if (!n.getParam("hp_before_returning", hp_before_returning)) {
         ROS_ERROR("Failed to get param 'hp_before_returning'");
     }
-
-    int mode;
-    if (!n.getParam("mode", mode)) {
-        ROS_ERROR("Failed to get param 'mode'");
-    }
-
-    std::cout << "Currently at mode: " << mode << std::endl;
 
     XmlRpc::XmlRpcValue base_location_list;
     std::vector<double> base_location;
@@ -222,7 +201,7 @@ int main(int argc, char **argv)
     for(int i = 0; i < supplies_location_list.size(); i++)
     {
         std::cout << supplies_location_list[i] << std::endl;
-        supplies_location.push_back(static_cast<double>(supplies_location_list[i]));
+      supplies_location.push_back(static_cast<double>(supplies_location_list[i]));
     }
 
     pub = n.advertise<decision::TargetCommand>("/decision/target_cmd", 10);
@@ -245,9 +224,6 @@ int main(int argc, char **argv)
     // tf2_ros::TransformListener tfListener(tfBuffer);
     // geometry_msgs::TransformStamped transformStamped;
     geometry_msgs::PoseWithCovarianceStamped pose_msg;
-    std::chrono::steady_clock::time_point last_goal_time = std::chrono::steady_clock::now();
-
-    // std::cout << 123 << std::endl;
 
     while (ros::ok()) {
         // try
@@ -263,52 +239,16 @@ int main(int argc, char **argv)
             // << transformStamped.transform.translation.y << std::endl;
         // position.x = transformStamped.transform.translation.x;
         // position.y = transformStamped.transform.translation.y;
-
-        // std::cout << "Game progress: " << (int)game_stats.game_progress << std::endl;
         
-        if (game_stats.game_progress != 4) {
-            ros::spinOnce();
+        while (game_stats.game_progress != 4) {
             continue;
         }
 
-        // std::cout << "Entering loop" << std::endl;
-
-        if (mode == 1 && decision_state == DecisionState::PATROLLING && waypoint_changed == true) {
+        if (decision_state == DecisionState::PATROLLING && waypoint_changed == true) {
             goal.goal_x = patrol_path[current_waypoint][0];
             goal.goal_y = patrol_path[current_waypoint][1];
-            std::cout << "Sending goal: (" << goal.goal_x << ", " << goal.goal_y << ")" << std::endl;
-            std::cout << "Current position: (" << position.x << ", " << position.y << ")" << std::endl;
-            nav_client.sendGoal(goal);
-            waypoint_changed = false;
-        }
-
-        if (mode == 2 && decision_state == DecisionState::PATROLLING) {
-            goal.goal_x = control_location[0];
-            goal.goal_y = control_location[1];
-            std::cout << "Sending control point: (" << goal.goal_x << ", " << goal.goal_y << ")" << std::endl;
-            std::cout << "Current position: (" << position.x << ", " << position.y << ")" << std::endl;
-            nav_client.sendGoal(goal);
-            waypoint_changed = false;
-        }
-
-        auto now = std::chrono::steady_clock::now();
-        auto time_diff = std::chrono::duration_cast<std::chrono::seconds>(now - last_goal_time);
-
-        if (mode == 1 && decision_state == DecisionState::PATROLLING && time_diff.count() >= 5) {
-            goal.goal_x = patrol_path[current_waypoint][0];
-            goal.goal_y = patrol_path[current_waypoint][1];
-            std::cout << "Resending goal: (" << goal.goal_x << ", " << goal.goal_y << ")" << std::endl;
-            std::cout << "Current position: (" << position.x << ", " << position.y << ")" << std::endl;
-            nav_client.sendGoal(goal);
-            // Update the last goal time
-            last_goal_time = now;
-        }
-
-        if (mode == 2 && decision_state == DecisionState::PATROLLING && time_diff.count() >= 5) {
-            goal.goal_x = control_location[0];
-            goal.goal_y = control_location[1];
-            std::cout << "Resending control point: (" << goal.goal_x << ", " << goal.goal_y << ")" << std::endl;
-            std::cout << "Current position: (" << position.x << ", " << position.y << ")" << std::endl;
+            ROS_INFO("Sending goal: (%f, %f)", goal.goal_x, goal.goal_y);
+            ROS_INFO("Current position: (%f, %f)", position.x, position.y);
             nav_client.sendGoal(goal);
             waypoint_changed = false;
         }
@@ -399,7 +339,7 @@ int main(int argc, char **argv)
 
         pub.publish(cmd_msg);
 
-        if (mode == 1 && decision_state == DecisionState::PATROLLING && nav_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+        if (decision_state == DecisionState::PATROLLING && nav_client.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
             waypoint_changed = true;
             current_waypoint = (current_waypoint + 1) % patrol_path.size();
         }

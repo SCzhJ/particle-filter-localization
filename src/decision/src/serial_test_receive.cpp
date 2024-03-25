@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
     if (!nh.getParam("serial_port", serial_port)) {
         ROS_WARN("Failed to get param \"serial_port\", using default value \"/dev/ttyACM0\".");
     }
-    angles_pub = nh.advertise<decision::Angles>("/angles", 1000);
+    angles_pub = nh.advertise<decision::Angles>("/angle_topic", 1000);
     gamestats_pub = nh.advertise<decision::GameStats>("/decision/gamestats", 1000);
     float delta_time = 0.1;
     try

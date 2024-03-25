@@ -1,5 +1,5 @@
 <launch>
     <rosparam param="serial_port">/dev/ttyACM0</rosparam>
-    <rosparam command="load" file="$(find decision)/config/decision.yaml" />
+    <rosparam command="load" file="$(find decision)/param/decision.yaml" />
     <node pkg="decision" type="serial_test_receive_node" name="serial_test_receive_node" output="screen" />
 </launch>

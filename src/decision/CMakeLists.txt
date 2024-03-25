@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   actionlib_msgs
   bot_sim
+  tf2_ros
 )
 
 ## System dependencies are found with CMake's conventions
