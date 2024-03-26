@@ -171,6 +171,7 @@ int main(int argc, char **argv)
     int current_waypoint = 2;
     int last_hp = 600;
     bool waypoint_changed = true;
+    bool switched_charge_goal = false;
     bot_sim::NavActionGoal goal;
     geometry_msgs::PoseWithCovarianceStamped pose_msg;
     std::chrono::steady_clock::time_point last_goal_time = std::chrono::steady_clock::now();
@@ -243,8 +244,9 @@ int main(int argc, char **argv)
             at_supplies_location = false;
         }
 
-        if (game_stats.stage_remain_time <= 240) {
+        if (!switched_charge_goal && game_stats.stage_remain_time <= 240) {
             patrol_path[3] = central_point_location;
+            switched_charge_goal = true;
             if (decision_state == DecisionState::CHARGING)
                 waypoint_changed = true;
         }
@@ -293,6 +295,14 @@ int main(int argc, char **argv)
                 waypoint_changed = true;
                 current_waypoint -= 1;
             }
+        }
+        
+        if (decision_state == DecisionState::HEALING && current_waypoint == 1) {
+            current_waypoint = 0;
+        }
+
+        if (decision_state == DecisionState::CHARGING && current_waypoint == 1) {
+            current_waypoint = 2;
         }
 
         ros::spinOnce();
