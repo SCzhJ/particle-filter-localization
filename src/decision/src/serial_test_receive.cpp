@@ -16,7 +16,7 @@ const double PI = 3.14159265358979323846;
 
 serial::Serial ser;
 const int read_length_navigation = 10;
-const int read_length_decision = 49;
+const int read_length_decision = 51;
 
 ros::Publisher angles_pub;
 ros::Publisher gamestats_pub;
@@ -84,6 +84,7 @@ public:
             gamestats_msg.bullet_speed = rx_struct_.bullet_speed;
             gamestats_msg.shooter_speed_limit = rx_struct_.shooter_speed_limit;
             gamestats_msg.event_data = rx_struct_.event_data;
+            gamestats_msg.projectile_allowance_17mm = rx_struct_.projectile_allowance_17mm;
             gamestats_pub.publish(gamestats_msg);
 
             // ROS_INFO("Read from buffer");
@@ -161,10 +162,12 @@ private:
                 bit 30-31：中心增益点的占领情况，0 为未被占领，1 为被己方占领，2 为被
                 对方占领，3 为被双方占领。（仅 RMUL 适用）
                 */
+
+            uint16_t projectile_allowance_17mm;   
     } __attribute__((packed));         // To avoid memory alignment issues
 
     GameStats_ rx_struct_{};
-    uint8_t rx_buffer_[49]{};
+    uint8_t rx_buffer_[51]{};
 };
 
 

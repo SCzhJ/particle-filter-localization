@@ -149,6 +149,12 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to get param 'base_location'");
     }
 
+    XmlRpc::XmlRpcValue central_point_location_list;
+    std::vector<double> central_point_location;
+    if (!n.getParam("central_point_location", central_point_location_list)) {
+        ROS_ERROR("Failed to get param 'central_point_location'");
+    }
+
     ros::Subscriber armors_sub = n.subscribe("/detector/armors", 10, armorCallback);
 
     ros::Subscriber gamestats_sub = n.subscribe("/decision/gamestats", 10, gamestatsCallback);
@@ -228,6 +234,19 @@ int main(int argc, char **argv)
             current_waypoint = std::min(current_waypoint + 1, 3);
             waypoint_changed = true;
             at_supplies_location = false;
+        }
+
+        if (decision_state == DecisionState::HEALING && !healingAvailable()) {
+            decision_state = DecisionState::RETURNING;
+            current_waypoint = std::max(current_waypoint - 1, 1);
+            waypoint_changed = true;
+            at_supplies_location = false;
+        }
+
+        if (game_stats.stage_remain_time <= 240) {
+            patrol_path[3] = central_point_location;
+            if (decision_state == DecisionState::CHARGING)
+                waypoint_changed = true;
         }
 
         // if ((decision_state == DecisionState::RETURNING || decision_state == DecisionState::RETREAT) && game_stats.remain_hp >= restore_to_hp) {

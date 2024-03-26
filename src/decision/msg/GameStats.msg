@@ -32,3 +32,5 @@ float32 bullet_speed
 uint8 shooter_speed_limit
 
 uint32 event_data
+
+uint16 projectile_allowance_17mm
