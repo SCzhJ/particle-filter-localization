@@ -16,15 +16,26 @@
 
 
 double first_RADIUS;
-double second_RADIUS, slope, max_height, start_height;
+double second_RADIUS, max_height, start_height;
+
+double slope_1,slp_first_RADIUS, height_1;
+double slope_2, slp_second_RADIUS, height_2;
+double slope_3,slp_third_RADIUS, height_3;
 void callback(bot_sim::testConfig &config, uint32_t level) {
     first_RADIUS=config.first_RADIUS;
     second_RADIUS=config.second_RADIUS;
-    slope=config.slope;
     max_height=config.max_height;
     start_height=config.start_height;
-
+    slope_1=config.slope_1;
+    slope_2=config.slope_2;
+    slope_3=config.slope_3;
+    slp_first_RADIUS=config.slp_first_RADIUS;
+    slp_second_RADIUS=config.slp_second_RADIUS;
+    slp_third_RADIUS=config.slp_third_RADIUS;
+    height_1=max_height+(slp_second_RADIUS-slp_first_RADIUS)*slope_2;
+    height_2=height_1+(slp_third_RADIUS-slp_second_RADIUS)*slope_3;
 }
+
 bool get_msg = 0;
 std::string base_frame;
 std::string laser_frame;
@@ -61,8 +72,21 @@ bool satisfied(double nx, double ny, double z){
         }
         return z<=start_height;
     }
-    double dis=sqrt(nx*nx+ny*ny)-second_RADIUS;
-    return z<=std::min(max_height,dis*slope+start_height);
+    //three circular truncated cone
+    if(nx*nx+ny*ny <=slp_first_RADIUS * slp_first_RADIUS){
+        double dis=sqrt(nx*nx+ny*ny)-second_RADIUS;
+        return z<=std::min(max_height,dis*slope_1+start_height);//max_height for security
+    }
+    
+    if(nx*nx+ny*ny <=slp_second_RADIUS * slp_second_RADIUS){
+        double dis=sqrt(nx*nx+ny*ny)-slp_first_RADIUS;
+        return z<=std::min(height_1,dis*slope_2+max_height);
+    }
+
+    double dis=sqrt(nx*nx+ny*ny)-slp_second_RADIUS;
+    return z<=std::min(height_2,dis*slope_3+height_1);
+    
+
 }
 
 int main(int argc, char **argv)
