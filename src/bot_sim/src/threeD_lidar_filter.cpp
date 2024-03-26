@@ -158,7 +158,6 @@ int main(int argc, char **argv)
             double ny = point_out.y();
             double nz = point_out.z();
             if (satisfied(nx,ny,z))
-            if (satisfied(nx,ny,z))
             {
                 scan_new.points.push_back(scan_record_left.points[i]);
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));

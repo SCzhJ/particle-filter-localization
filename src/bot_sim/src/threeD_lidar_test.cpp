@@ -15,12 +15,15 @@
 #include <bot_sim/testConfig.h>
 
 
-float RADIUS, max_z, min_z;
-
+double first_RADIUS;
+double second_RADIUS, slope, max_height, start_height;
 void callback(bot_sim::testConfig &config, uint32_t level) {
-    RADIUS=config.radius;
-    max_z=config.max_z;
-    min_z=config.min_z;
+    first_RADIUS=config.first_RADIUS;
+    second_RADIUS=config.second_RADIUS;
+    slope=config.slope;
+    max_height=config.max_height;
+    start_height=config.start_height;
+
 }
 bool get_msg = 0;
 std::string base_frame;
@@ -42,12 +45,24 @@ void scanCallback_right(const livox_ros_driver2::CustomMsg &scan)
     scan_copy_right = scan;
     get_msg = 1;
 }
-double max_dis=0,max_height=0;
+double max_dis=0;
 std::vector<double> distances;
 bool satisfied(double nx, double ny, double z){
-
-    max_dis=std::max(max_dis,z);
-    return nx*nx+ny*ny<=RADIUS*RADIUS && min_z<=z&&z<=max_z;
+    if(nx*nx+ny*ny <= first_RADIUS*first_RADIUS){
+        // if(z>0.1)printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
+        return 0;
+    }
+    if(nx*nx+ny*ny <= second_RADIUS*second_RADIUS){
+        // printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
+        if(0.3<=z&&z<=0.35){
+            distances.push_back(nx*nx+ny*ny);
+            max_dis=std::max(max_dis,nx*nx+ny*ny);
+            // printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
+        }
+        return z<=start_height;
+    }
+    double dis=sqrt(nx*nx+ny*ny)-second_RADIUS;
+    return z<=std::min(max_height,dis*slope+start_height);
 }
 
 int main(int argc, char **argv)

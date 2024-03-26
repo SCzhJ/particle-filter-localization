@@ -33,7 +33,7 @@ class NavCtrl:
     def __init__(self, trajectories: List[trajObject], cost_map_path: str, dyn_map_name: str,
                  dt: float, traj_cut_percentage: float = 0.5, iter_percentage: float = 0.5,
                  pathfollowext_percentage: float = 0.8, cmd_vel_topic: str = "/cmd_vel",
-                 within_point: float = 0.7, within_goal: float = 0.55, cost_method: str = "omni"):
+                 within_point: float = 0.6, within_goal: float = 0.4, cost_method: str = "omni"):
         self._action_name = "nav_ctrl"
         self._as = actionlib.SimpleActionServer(self._action_name, NavActionAction, execute_cb=self.nav_to_goal, auto_start = False)
         self._as.start()
@@ -228,7 +228,10 @@ if __name__=="__main__":
     dt = 0.2
     # trajectories = TrajectoryMode.DifferentialDriveTrajectory(x_vel=0.5, omega_increment=0.1, num_of_traj_one_side=7) + \
     #     TrajectoryMode.DifferentialDriveTrajectory(x_vel=-0.5, omega_increment=0.1, num_of_traj_one_side=7)
-    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.2, num_of_traj=25) + TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=20) + TrajectoryMode.ShiftTrajectories(linear_vel=0.6, num_of_traj=15) + TrajectoryMode.ShiftTrajectories(linear_vel=0.4, num_of_traj=10)
+    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.3, num_of_traj=25) + \
+            TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=20) + \
+            TrajectoryMode.ShiftTrajectories(linear_vel=0.6, num_of_traj=15) + \
+            TrajectoryMode.ShiftTrajectories(linear_vel=1.6, num_of_traj=21)
 
     for traj in trajectories:
         TrajectoryMode.GenTrajectory(traj, 0.05, record_every_iter=1, iteration=10)

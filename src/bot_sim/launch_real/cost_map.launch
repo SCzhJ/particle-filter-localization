@@ -1,7 +1,7 @@
 <launch>
-    <arg name="map" default="hotel.map.yaml" />
+    <arg name="map" default="tyg2.map.yaml" />
     <node name="map_server" pkg="map_server" type="map_server" args="$(find bot_sim)/map/$(arg map)"/>
     <node pkg="bot_sim" type="collision_cost_map.py" name="collision_cost_map" output="screen">
-        <param name="map_path" type="string" value="hotel"/>
+        <param name="map_path" type="string" value="tyg2"/>
     </node>
 </launch>
