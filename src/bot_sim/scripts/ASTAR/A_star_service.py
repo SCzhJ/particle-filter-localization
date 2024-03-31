@@ -353,7 +353,7 @@ def response_function(msg):
         if(i!=len(rx)-1):
             p.z = calculate_angle(x, y, rx[i+1], ry[i+1])
         else:
-            p.z = 0
+            p.z = -114514
         if(last.z!=p.z):
             path_marker.points.append(p)
             path.append(p)
