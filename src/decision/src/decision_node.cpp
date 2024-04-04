@@ -79,12 +79,16 @@ int getNearestWaypoint(const std::vector<std::vector<double>> & patrol_path, con
 
 std::chrono::steady_clock::time_point last_healing_time = std::chrono::steady_clock::now();
 bool at_supplies_location = false;
+bool supplies_available = true;
 int hp_restored = 0;
 
 bool healingAvailable() {
     auto now = std::chrono::steady_clock::now();
     auto healing_timeout = std::chrono::duration_cast<std::chrono::seconds>(now - last_healing_time).count();
-    return game_stats.stage_remain_time >= 60 && hp_restored < 500 && (at_supplies_location && healing_timeout < 6 || !at_supplies_location);
+    if (at_supplies_location && healing_timeout >= 8) {
+        supplies_available = false;
+    }
+    return game_stats.stage_remain_time >= 60 && hp_restored < 500 && (at_supplies_location && healing_timeout < 8 || !at_supplies_location) && supplies_available;
 }
 
 void gamestatsCallback(const decision::GameStats::ConstPtr& gamestats_msg)
@@ -149,6 +153,17 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to get param 'base_location'");
     }
 
+    XmlRpc::XmlRpcValue central_point_location_list;
+    std::vector<double> central_point_location;
+    if (!n.getParam("central_point_location", central_point_location_list)) {
+        ROS_ERROR("Failed to get param 'central_point_location'");
+    }
+    for (size_t i = 0; i < central_point_location_list.size(); ++i) {
+        central_point_location.push_back(static_cast<double>(central_point_location_list[i]));
+    }
+
+    // std::cout << central_point_location[0] << " " << central_point_location[1] << std::endl;
+
     ros::Subscriber armors_sub = n.subscribe("/detector/armors", 10, armorCallback);
 
     ros::Subscriber gamestats_sub = n.subscribe("/decision/gamestats", 10, gamestatsCallback);
@@ -165,6 +180,7 @@ int main(int argc, char **argv)
     int current_waypoint = 2;
     int last_hp = 600;
     bool waypoint_changed = true;
+    bool switched_charge_goal = false;
     bot_sim::NavActionGoal goal;
     geometry_msgs::PoseWithCovarianceStamped pose_msg;
     std::chrono::steady_clock::time_point last_goal_time = std::chrono::steady_clock::now();
@@ -230,6 +246,26 @@ int main(int argc, char **argv)
             at_supplies_location = false;
         }
 
+        if (decision_state == DecisionState::HEALING && !healingAvailable()) {
+            decision_state = DecisionState::RETURNING;
+            current_waypoint = std::max(current_waypoint - 1, 1);
+            waypoint_changed = true;
+            at_supplies_location = false;
+        }
+        
+        if (decision_state == DecisionState::RETURNING && game_stats.remain_hp < hp_before_healing && healingAvailable()) {
+            decision_state = DecisionState::HEALING;
+            current_waypoint = std::max(current_waypoint - 1, 0);
+            waypoint_changed = true;
+        }
+
+        if (!switched_charge_goal && game_stats.stage_remain_time <= 240) {
+            patrol_path[3] = central_point_location;
+            switched_charge_goal = true;
+            if (decision_state == DecisionState::CHARGING)
+                waypoint_changed = true;
+        }
+
         // if ((decision_state == DecisionState::RETURNING || decision_state == DecisionState::RETREAT) && game_stats.remain_hp >= restore_to_hp) {
         //     decision_state = DecisionState::CHARGING;
         //     current_waypoint = std::min(current_waypoint + 1, 3);
@@ -274,6 +310,14 @@ int main(int argc, char **argv)
                 waypoint_changed = true;
                 current_waypoint -= 1;
             }
+        }
+        
+        if (decision_state == DecisionState::HEALING && current_waypoint == 1) {
+            current_waypoint = 0;
+        }
+
+        if (decision_state == DecisionState::CHARGING && current_waypoint == 1) {
+            current_waypoint = 2;
         }
 
         ros::spinOnce();
