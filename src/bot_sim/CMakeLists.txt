@@ -163,6 +163,7 @@ add_executable(dbscan_bfs src/dbscan_bfs.cpp)
 add_executable(dbscan_bfs_3D src/dbscan_bfs_3D.cpp)
 add_executable(threeD_lidar_test src/threeD_lidar_test.cpp)
 add_executable(ser2msg_write_only src/ser2msg_write_only.cpp)
+add_executable(dstarlite src/dstarlite.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -208,11 +209,15 @@ target_link_libraries(threeD_lidar_test
 target_link_libraries(ser2msg_write_only
   ${catkin_LIBRARIES}
 )
+target_link_libraries(dstarlite
+  ${catkin_LIBRARIES}
+)
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(real_robot_transform ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(threeD_lidar_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(ser2msg_write_only ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(dstarlite ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #############
 ## Install ##
 #############3D_lidar_filteration
