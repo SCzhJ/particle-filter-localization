@@ -13,11 +13,7 @@
 #include <math.h>
 
 double first_RADIUS;
-double second_RADIUS, max_height, start_height;
-
-double slope_1,slp_first_RADIUS, height_1;
-double slope_2, slp_second_RADIUS, height_2;
-double slope_3,slp_third_RADIUS, height_3;
+double second_RADIUS, slope, max_height, start_height;
 
 bool get_msg = 0;
 std::string base_frame;
@@ -39,10 +35,8 @@ void scanCallback_right(const livox_ros_driver2::CustomMsg &scan)
     scan_copy_right = scan;
     get_msg = 1;
 }
-
 double max_dis=0;
 std::vector<double> distances;
-
 bool satisfied(double nx, double ny, double z){
     if(nx*nx+ny*ny <= first_RADIUS*first_RADIUS){
         // if(z>0.1)printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
@@ -57,26 +51,12 @@ bool satisfied(double nx, double ny, double z){
         }
         return z<=start_height;
     }
-    //three circular truncated cone
-    if(nx*nx+ny*ny <=slp_first_RADIUS * slp_first_RADIUS){
-        double dis=sqrt(nx*nx+ny*ny)-second_RADIUS;
-        return z<=std::min(max_height,dis*slope_1+start_height);//max_height for security
-    }
-    
-    if(nx*nx+ny*ny <=slp_second_RADIUS * slp_second_RADIUS){
-        double dis=sqrt(nx*nx+ny*ny)-slp_first_RADIUS;
-        return z<=std::min(height_1,dis*slope_2+max_height);
-    }
-
-    double dis=sqrt(nx*nx+ny*ny)-slp_second_RADIUS;
-    return z<=std::min(height_2,dis*slope_3+height_1);
-    
-
+    double dis=sqrt(nx*nx+ny*ny)-second_RADIUS;
+    return z<=std::min(max_height,dis*slope+start_height);
 }
-
 int main(int argc, char **argv)
 {
-    std::string node_name = "threeD_lidar_test";
+    std::string node_name = "threeD_lidar_filter";
     ros::init(argc, argv, node_name);
     ros::NodeHandle nh;
 
@@ -125,43 +105,19 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to retrieve parameter 'start_height'");
         return -1;
     }
-    if (!nh.getParam("/" + node_name + "/slope_1", slope_1))
+    if (!nh.getParam("/" + node_name + "/slope", slope))
     {
-        ROS_ERROR("Failed to retrieve parameter 'slope_1'");
+        ROS_ERROR("Failed to retrieve parameter 'slope'");
         return -1;
     }
-    if (!nh.getParam("/" + node_name + "/slope_2", slope_2))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'slope_2'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/slope_3", slope_3))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'slope_3'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/slp_first_RADIUS", slp_first_RADIUS))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'slp_first_RADIUS'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/slp_second_RADIUS", slp_second_RADIUS))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'slp_second_RADIUS'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/slp_third_RADIUS", slp_third_RADIUS))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'slp_third_RADIUS'");
-        return -1;
-    }
-
 
     ros::Subscriber sub_left = nh.subscribe(scan_topic_left, 1, scanCallback_left);
     ros::Subscriber sub_right = nh.subscribe(scan_topic_right, 1, scanCallback_right);
     pub = nh.advertise<livox_ros_driver2::CustomMsg>(new_scan_topic, 1);
-    ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2>("test_scan2", 1);
+    ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2>("test_scan", 1);
 
+    tf2_ros::Buffer tfBuffer;
+    tf2_ros::TransformListener tfListener(tfBuffer);
     ros::Rate rate(50.0);
 
     // For testing
@@ -169,10 +125,18 @@ int main(int argc, char **argv)
     // ---
     while (ros::ok())
     {
-            ros::spinOnce();
         if (!get_msg)
         {
+            ros::spinOnce();
             continue;
+        }
+        try
+        {
+            transformStamped = tfBuffer.lookupTransform(base_frame, laser_frame, ros::Time(0));
+        }
+        catch (tf2::TransformException &ex)
+        {
+            std::cout << "Error: " << ex.what() << std::endl;
         }
         max_dis=0;
         distances.clear();
@@ -181,40 +145,46 @@ int main(int argc, char **argv)
         auto scan_record_right = scan_copy_right;
         scan_new.points.clear();
         pcl_cloud.points.clear();
+        tf2::Transform tf_transform;
+        tf2::fromMsg(transformStamped.transform, tf_transform);
         for (int i = 0; i < scan_record_left.points.size(); i++)
         {
             double x = scan_record_left.points[i].x;
             double y = scan_record_left.points[i].y;
             double z = scan_record_left.points[i].z;
-            double nx = x;
-            double ny = y;
-            double nz = z;
-            // if (satisfied(nx,ny,z))
-            // {
-            scan_new.points.push_back(scan_record_left.points[i]);
-            pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
-            // }
+            tf2::Vector3 point_in(x, y, z);
+            tf2::Vector3 point_out = tf_transform * point_in;
+            double nx = point_out.x();
+            double ny = point_out.y();
+            double nz = point_out.z();
+            if (satisfied(nx,ny,z))
+            {
+                scan_new.points.push_back(scan_record_left.points[i]);
+                pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
+            }
         }
         for (int i = 0; i < scan_record_right.points.size(); i++)
         {
             double x = scan_record_right.points[i].x;
             double y = scan_record_right.points[i].y;
             double z = scan_record_right.points[i].z;
-            double nx = x;
-            double ny = y;
-            double nz = z;
-            // if (satisfied(nx,ny,z))
-            // {
+            tf2::Vector3 point_in(x, y, z);
+            tf2::Vector3 point_out = tf_transform * point_in;
+            double nx = point_out.x();
+            double ny = point_out.y();
+            double nz = point_out.z();
+            if (satisfied(nx,ny,z))
+            {
                 scan_new.points.push_back(scan_record_right.points[i]);
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
-            // }
+            }
         }
         sort(distances.begin(),distances.end());
         // for(int i=(int)distances.size()-1;i>=0;i--)printf("%lf ",distances[i]);
         // printf("\nmax_dis: %f\n----------------------\n",max_dis);
-        // scan_new.header.stamp = ros::Time::now();
-        // scan_new.point_num = scan_new.points.size();
-        // pub.publish(scan_new);
+        scan_new.header.stamp = ros::Time::now();
+        scan_new.point_num = scan_new.points.size();
+        pub.publish(scan_new);
 
         // For testing
         sensor_msgs::PointCloud2 output;
