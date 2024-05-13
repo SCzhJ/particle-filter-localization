@@ -1,2 +1,2 @@
 - setup-file:
-    local-name: /home/sentry_train_test/AstarTraining/sim_nav/devel/setup.sh
+    local-name: /home/cyx1024/D/RM/python-ROS-localization-and-planning/devel/setup.sh

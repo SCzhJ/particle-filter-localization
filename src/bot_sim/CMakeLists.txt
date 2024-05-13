@@ -153,6 +153,7 @@ include
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(scan_2_node src/scan_2_node.cpp)
 add_executable(real_robot_transform src/real_robot_transform.cpp)
+add_executable(real_robot_transform_3D src/real_robot_transform_3D.cpp include/EKF.h)
 add_executable(cmd2ser src/cmd2ser.cpp)
 add_executable(ser2msg src/ser2msg.cpp)
 add_executable(wavefront src/wavefront.cpp)
@@ -164,6 +165,7 @@ add_executable(dbscan_bfs_3D src/dbscan_bfs_3D.cpp)
 add_executable(threeD_lidar_test src/threeD_lidar_test.cpp)
 add_executable(ser2msg_write_only src/ser2msg_write_only.cpp)
 add_executable(dstarlite src/dstarlite.cpp)
+
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
