@@ -4,13 +4,14 @@
 #include <Eigen/Eigen>
 #include <Eigen/src/Core/Matrix.h>
 #include <utility>
+#include <math.h>
 #define PRINT_MATRIX(x) std::cout << #x "=\n" << x << std::endl
 
 
 using Quaterniond = Eigen::Quaterniond;
 using Vec3d = Eigen::Vector3d;
 
-
+//增量计算(两种方式)
 template <typename Derived>
 static Eigen::Quaternion<typename Derived::Scalar> deltaQ(const Eigen::MatrixBase<Derived> &v3d) {
   typedef typename Derived::Scalar Scalar_t;
@@ -32,10 +33,11 @@ static Eigen::Quaternion<typename Derived::Scalar> deltaQ(const Eigen::MatrixBas
   }
 
   // return {cos(|t|/2), sin(|t|/2)/|t|*t}
-  return Eigen::Quaterniond(real_factor, imag_factor * v3d.x(), imag_factor * v3d.y(), imag_factor * v3d.z())
+  return Quaterniond(real_factor, imag_factor * v3d.x(), imag_factor * v3d.y(), imag_factor * v3d.z())
       .cast<Scalar_t>();
 }
 
+//计算斜对称矩阵
 inline Eigen::Matrix3d Skew(const Vec3d &t) {
     Eigen::Matrix3d t_hat;
     t_hat << 0, -t(2), t(1), t(2), 0, -t(0), -t(1), t(0), 0;
@@ -181,6 +183,47 @@ Quaterniond EkfEstimator::EstimatePose(double timestamp, const Vec3d &angular_ve
   this->P = P_posterior;
 
   return this->pose;
+}
+
+//Slerp 球面线性插值
+Quaterniond Quaternion_S_lerp(Quaterniond &start_q, Quaterniond &end_q, double t)
+{
+        Quaterniond lerp_q;
+
+        double cos_angle = start_q.x() * end_q.x()
+                         + start_q.y() * end_q.y()
+                         + start_q.z() * end_q.z()
+                         + start_q.w() * end_q.w();
+
+        // If the dot product is negative, the quaternions have opposite handed-ness and slerp won't take
+        // the shorter path. Fix by reversing one quaternion.
+        if (cos_angle < 0) {
+                end_q.x() = -end_q.x();
+                end_q.y() = -end_q.y();
+                end_q.z() = -end_q.z();
+                end_q.w() = -end_q.w();
+                cos_angle = -cos_angle;
+        }
+
+        double ratio_A, ratio_B;
+         If the inputs are too close for comfort, linearly interpolate
+        if (cos_angle > 0.99995f) {
+                ratio_A = 1.0f - t;
+                ratio_B = t;
+        }
+        else {
+                double sin_angle = sqrt( 1.0f - cos_angle * cos_angle);
+                double angle = atan2(sin_angle, cos_angle);
+                ratio_A = sin((1.0f - t) * angle)  / sin_angle;
+                ratio_B = sin(t * angle) / sin_angle;
+        }
+
+        lerp_q.x() = ratio_A * start_q.x() + ratio_B * end_q.x();
+        lerp_q.y() = ratio_A * start_q.y() + ratio_B * end_q.y();
+        lerp_q.z() = ratio_A * start_q.z() + ratio_B * end_q.z();
+        lerp_q.w() = ratio_A * start_q.w() + ratio_B * end_q.w();
+
+        return lerp_q.normalized();
 }
 
 

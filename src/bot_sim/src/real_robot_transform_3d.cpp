@@ -17,6 +17,9 @@ std::string g_frame;
 std::unique_ptr<tf2_ros::StaticTransformBroadcaster> static_broadcaster;
 std::unique_ptr<Estimator> estimator;
 
+tf2::Quaternion qekf1;
+tf2::Quaternion qekf2;
+
 void odometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
     // Create a TransformStamped object
@@ -51,25 +54,8 @@ void chatterCallback(const sensor_msgs::Imu::ConstPtr &imu_ptr) {
         {imu_ptr->linear_acceleration.x, imu_ptr->linear_acceleration.y, imu_ptr->linear_acceleration.z}
         );
 
-    geometry_msgs::TransformStamped transformStamped1;
-    transformStamped1.header.frame_id = _3DLidar_frame;
-    transformStamped1.child_frame_id = gimbal_frame;
-    transformStamped1.transform.translation.x = -0.13388;
-    transformStamped1.transform.translation.y = -0.11369;
-    transformStamped1.transform.translation.z = 0.35;
-    tf2::Quaternion qx;
-    qx.setRPY(PI, 0, 0);
-    tf2::Quaternion qz;
-    qz.setRPY(0, 0, 45 * PI/180);
-    tf2::Quaternion qekf(pose.x(), pose.y(), pose.z(), pose.w());
-    auto q = qx * qz * qekf;
-    transformStamped1.transform.rotation.x = q.x();
-    transformStamped1.transform.rotation.y = q.y();
-    transformStamped1.transform.rotation.z = q.z();
-    transformStamped1.transform.rotation.w = q.w();
-
-    tf2_ros::TransformBroadcaster tfb;
-    tfb.sendTransform(transformStamped1);
+    tf2::Quaternion qekf1(pose.x(), pose.y(), pose.z(), pose.w());
+    
 }
 
 int main(int argc, char** argv){
@@ -104,15 +90,35 @@ int main(int argc, char** argv){
     tf2_ros::TransformBroadcaster broadcaster;
 
     ros::Subscriber sub = nh.subscribe("/aft_mapped_to_init", 1000, odometryCallback);
-    ros::Subscriber sub2 = nh.subscribe("/imu/data", 1000, chatterCallback);
+    // topic记得改
+    ros::Subscriber subimu1 = nh.subscribe("/imu/data1", 1000, chatterCallback);
+    // imu数据融合
+    // ros::Subscriber subimu1 = nh.subscribe("/imu/data2", 1000, chatterCallback);
+    // q_integrate = Quaternion_S_lerp(qekf1,qekf2);
+    geometry_msgs::TransformStamped transformStamped1;
+    transformStamped1.header.frame_id = _3DLidar_frame;
+    transformStamped1.child_frame_id = gimbal_frame;
+    transformStamped1.transform.translation.x = -0.13388;
+    transformStamped1.transform.translation.y = -0.11369;
+    transformStamped1.transform.translation.z = 0.35;
+    tf2::Quaternion qx;
+    qx.setRPY(PI, 0, 0);
+    tf2::Quaternion qz;
+    qz.setRPY(0, 0, 45 * PI/180);
+    auto q = qx * qz * qekf1;
+    // auto q = qx * qz * q_integrate;
+    transformStamped1.transform.rotation.x = q.x();
+    transformStamped1.transform.rotation.y = q.y();
+    transformStamped1.transform.rotation.z = q.z();
+    transformStamped1.transform.rotation.w = q.w();
 
     ros::Rate rate(100.0);  
-    // while (nh.ok()){
-    //     transformStamped1.header.stamp = ros::Time::now();
-    //     broadcaster.sendTransform(transformStamped1);
-    //     ros::spinOnce();
-    //     rate.sleep();
-    // }
-    ros::spinOnce();
+    while (nh.ok()){
+        transformStamped1.header.stamp = ros::Time::now();
+        broadcaster.sendTransform(transformStamped1);
+        ros::spinOnce();
+        rate.sleep();
+    }
+    // ros::spinOnce();
     return 0;
 }
