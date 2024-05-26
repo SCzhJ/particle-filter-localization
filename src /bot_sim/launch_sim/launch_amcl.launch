@@ -1,0 +1,7 @@
+<launch>
+    <arg name="map" default="ManyObstaclesMap.yaml" />
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find bot_sim)/map/$(arg map)"/>
+    <include file="$(find bot_sim)/launch_sim/amcl.launch" />
+    <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find bot_sim)/config/rviz/gazebo_laserbot.rviz" />-->
+
+</launch>

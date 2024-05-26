@@ -1,0 +1,11 @@
+<launch>
+    <node pkg="bot_sim" type="dbscan_bfs" name="dbscan_bfs" output="screen">
+        <remap from="scan" to="scan_laser" />
+        <param name="epsilon" type="double" value="0.2" />
+        <param name="minPts" type="int" value="6" />
+        <param name="dfs_decrease" type="int" value="4" />
+        <param name="dfs_threshold" type="int" value="65" />
+        <param name="parent_frame" type="string" value="laser_lrf_link" />
+        <param name="child_frame" type="string" value="base_footprint" />
+    </node>
+</launch>
