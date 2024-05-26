@@ -24,7 +24,6 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
-#define INF 1e9
 //雷达参数 theta_square = 0.000279328; //theta = 0.0167131
 
 extern int max_radar_x;
@@ -32,7 +31,7 @@ extern int max_radar_y;
 extern int min_radar_x;
 extern int min_radar_y;
 int obstacle_enlargement=4;
-int MAXN=100;
+int MAXN=50;
 //bfs方向数组
 int dx[4] = {0, 0, 1, -1};
 int dy[4] = {1, -1, 0, 0};
@@ -104,8 +103,8 @@ void dbscan(std::vector<dbscan_Point>& data, double eps, int minPts,int& cluster
 }
 
 //bfs膨胀
-void bfs(std::vector<dbscan_Point>& points, std::vector<std::vector<double> >& data, int width, int height, int decrease) {
-    std::queue<std::pair<int_Point, double> > q;
+void bfs(std::vector<dbscan_Point>& points, std::vector<std::vector<int>>& data, int width, int height, int decrease) {
+    std::queue<std::pair<int_Point, int>> q;
     for (dbscan_Point& p : points) {
         if (p.noise) continue;
         int tx = static_cast<int>(p.x);
@@ -117,7 +116,7 @@ void bfs(std::vector<dbscan_Point>& points, std::vector<std::vector<double> >& d
 
     while (!q.empty()) {
         int_Point p = q.front().first;
-        double value = q.front().second;
+        int value = q.front().second;
         q.pop();
 
         for (int i = 0; i < 4; ++i) {
@@ -127,7 +126,7 @@ void bfs(std::vector<dbscan_Point>& points, std::vector<std::vector<double> >& d
                 continue;
                 // std::cout<<"out of range\n";
             }
-            double next_value = value - 1 * decrease;
+            int next_value = std::max(0, int(value - decrease));
             if (data[ny][nx] < next_value) {
                 data[ny][nx] = next_value;
                 q.push({{nx, ny}, next_value});
@@ -140,9 +139,9 @@ void bfs(std::vector<dbscan_Point>& points, std::vector<std::vector<double> >& d
                 continue;
                 // std::cout<<"out of range\n";
             }
-            double next_value = value - 1.414 * decrease;
+            int next_value = std::max(0, int(value - decrease*1.4));
             if (data[ny][nx] < next_value) {
-                data[ny][nx] = next_value; 
+                data[ny][nx] = next_value;
                 q.push({{nx, ny}, next_value});
             }
         }
@@ -163,7 +162,7 @@ int minPts = 7; //聚类的最小点数
 int dfs_decrease = 5;
 int dfs_threshold = 50;
 std::string frame_name = "gimbal_frame";
-std::string parent_frame, child_frame, lidar_topic, obstacle_map_topic;
+std::string parent_frame, child_frame;
 
 int max_radar_x = -1e8, max_radar_y = -1e8, min_radar_x = 1e8, min_radar_y = 1e8;
 // extern tf2_ros::TransformListener tfListener(tfBuffer);
@@ -257,30 +256,16 @@ int main(int argc, char **argv)
     else{
         ROS_INFO("Got param 'parent_frame': %s", parent_frame.c_str());
     }
-    if (!ros::param::get("/" + node_name + "/lidar_topic", lidar_topic)) {
-        ROS_ERROR("Failed to get param 'lidar_topic'");
-    }
-    else{
-        ROS_INFO("Got param 'lidar_topic': %s", lidar_topic.c_str());
-    }
-    if (!ros::param::get("/" + node_name + "/obstacle_map_topic", obstacle_map_topic)) {
-        ROS_ERROR("Failed to get param 'obstacle_map_topic'");
-    }
-    else{
-        ROS_INFO("Got param 'obstacle_map_topic': %s", obstacle_map_topic.c_str());
-    }
     frame_name=child_frame;
-    grid_pub = nh.advertise<nav_msgs::OccupancyGrid>(obstacle_map_topic, 1); // (Topic Name, Queue Size)
+    grid_pub = nh.advertise<nav_msgs::OccupancyGrid>("grid", 1); // (Topic Name, Queue Size)
     
-    ros::Subscriber sub_1 = nh.subscribe(lidar_topic, 1, msgs_to_grid); // 订阅sensor_msgs/LaserScan 并转换(Topic Name, Queue Size, Callback Function)
+    ros::Subscriber sub_1 = nh.subscribe("/test_scan", 1, msgs_to_grid); // 订阅sensor_msgs/LaserScan 并转换(Topic Name, Queue Size, Callback Function)
     ros::Subscriber sub_2 = nh.subscribe("odom", 10, &odom_callback);//订阅mav_msgs/Odometry
     ros::Rate rate(100);
     while(ros::ok){
-        // ROS_INFO("dbscanstill_alive");
         if(get_scan){
-            // ROS_INFO("Get map!");
             auto start_ = std::chrono::high_resolution_clock::now();
-            // printf("get_scan");
+            printf("get_scan");
             // 声明grid变量
             nav_msgs::OccupancyGrid grid;
 
@@ -303,7 +288,7 @@ int main(int argc, char **argv)
             double roll, pitch, yaw;
             m.getRPY(roll, pitch, yaw);
             // 创建一个二维数组
-            std::vector<std::vector<double> > grid_vector(grid.info.height, std::vector<double>(grid.info.width, 0));
+            std::vector<std::vector<int>> grid_vector(grid.info.height, std::vector<int>(grid.info.width, 0));
             // 创建储存雷达数据的二维数组
             int data_size = scan_record->points.size();
             // 将激光扫描数据转换为占用网格
@@ -342,25 +327,51 @@ int main(int argc, char **argv)
                 dbscan_data[i].y =(dbscan_data[i].y - y_origin) / grid.info.resolution;
             }
                 
-            //膨胀
+                //膨胀
             bfs(dbscan_data,grid_vector,grid.info.width,grid.info.height, dfs_decrease);
+
+            
+            for(size_t i = 0; i < dbscan_data.size(); ++i)
+            {   
+                int grid_x = dbscan_data[i].x;
+                int grid_y = dbscan_data[i].y;
+                // std::cout<<i<<" x:"<<x<<" y:"<<y<<"\n";
+                // 将笛卡尔坐标转换为占用网格的索引 原点在网格的中心
+                // int grid_x =(x - x_origin) / grid.info.resolution;
+                // int grid_y =(y - y_origin) / grid.info.resolution;
+                max_radar_x = max_radar_x > grid_x ? max_radar_x : grid_x;
+                max_radar_y = max_radar_y > grid_y ? max_radar_y : grid_y;
+                min_radar_x = min_radar_x < grid_x ? min_radar_x : grid_x;
+                min_radar_y = min_radar_y < grid_y ? min_radar_y : grid_y;
+                // 剔除超过地图范围的点
+                if (grid_x < 0 || grid_x >= grid.info.width || grid_y < 0 || grid_y >= grid.info.height) {
+                    data_size--;
+                    continue;
+                }
+                // 计算二维坐标的一维索引
+                if (!dbscan_data[i].noise) grid_vector[grid_y][grid_x] = 100;
+                else if (dbscan_data[i].cluster == 0) grid_vector[grid_y][grid_x] = -1;
+                else grid_vector[grid_y][grid_x] = 50;
+                // std::cout<<i<<" x:"<<grid_x<<" y:"<<grid_y<<" id:"<<dbscan_data[i].cluster<<"\n";
+            }
 
             for (int i = 0; i < grid.info.height; ++i) {
                 for (int j = 0; j < grid.info.width; ++j) {
                     int index = i * grid.info.width + j;
-                    //阈值设置
-                    grid.data[index] = std::max(0, int(grid_vector[i][j]));
+
+                                //阈值设置
+                    if (grid_vector[i][j] >= dfs_threshold) grid.data[index] = 100;
                 }
             }
             
             auto end_ = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> diff = end_-start_;
 
-            // std::cout << "Time difference: " << diff.count() << " s\n";
+            std::cout << "Time difference: " << diff.count() << " s\n";
             grid_pub.publish(grid);
             get_scan=0;
         }
-        ros::spinOnce();
+        ros::spinOnce();    
         rate.sleep();
     }
     // ros::Timer timer = nh.createTimer(ros::Duration(0.1), publish_transform);  // 每隔0.1秒发布一次坐标变换

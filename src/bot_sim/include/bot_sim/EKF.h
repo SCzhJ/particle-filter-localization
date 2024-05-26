@@ -1,5 +1,6 @@
 #ifndef EKF_H
 #define EKF_H
+#include <glog/logging.h>
 #include <ceres/ceres.h>
 #include <Eigen/Eigen>
 #include <Eigen/src/Core/Matrix.h>
@@ -206,7 +207,7 @@ Quaterniond Quaternion_S_lerp(Quaterniond &start_q, Quaterniond &end_q, double t
         }
 
         double ratio_A, ratio_B;
-         If the inputs are too close for comfort, linearly interpolate
+        //If the inputs are too close for comfort, linearly interpolate
         if (cos_angle > 0.99995f) {
                 ratio_A = 1.0f - t;
                 ratio_B = t;
