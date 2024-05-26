@@ -1,2 +1,0 @@
-bot_sim
--DCATKIN_DEVEL_PREFIX=/home/cyx1024/D/RM/python-ROS-localization-and-planning/devel -DCMAKE_INSTALL_PREFIX=/home/cyx1024/D/RM/python-ROS-localization-and-planning/install -G Unix Makefiles

@@ -1,8 +1,0 @@
-prefix=/home/sentry_train_test/AstarTraining/sim_nav/install
-
-Name: bot_sim
-Description: Description of bot_sim
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
