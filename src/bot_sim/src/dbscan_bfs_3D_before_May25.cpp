@@ -31,7 +31,7 @@ extern int max_radar_y;
 extern int min_radar_x;
 extern int min_radar_y;
 int obstacle_enlargement=4;
-int MAXN=50;
+int MAXN=100;
 //bfs方向数组
 int dx[4] = {0, 0, 1, -1};
 int dy[4] = {1, -1, 0, 0};
@@ -162,7 +162,7 @@ int minPts = 7; //聚类的最小点数
 int dfs_decrease = 5;
 int dfs_threshold = 50;
 std::string frame_name = "gimbal_frame";
-std::string parent_frame, child_frame;
+std::string parent_frame, child_frame, lidar_topic, obstacle_map_topic;
 
 int max_radar_x = -1e8, max_radar_y = -1e8, min_radar_x = 1e8, min_radar_y = 1e8;
 // extern tf2_ros::TransformListener tfListener(tfBuffer);
@@ -256,16 +256,28 @@ int main(int argc, char **argv)
     else{
         ROS_INFO("Got param 'parent_frame': %s", parent_frame.c_str());
     }
+    if (!ros::param::get("/" + node_name + "/lidar_topic", lidar_topic)) {
+        ROS_ERROR("Failed to get param 'lidar_topic'");
+    }
+    else{
+        ROS_INFO("Got param 'lidar_topic': %s", lidar_topic.c_str());
+    }
+    if (!ros::param::get("/" + node_name + "/obstacle_map_topic", obstacle_map_topic)) {
+        ROS_ERROR("Failed to get param 'obstacle_map_topic'");
+    }
+    else{
+        ROS_INFO("Got param 'obstacle_map_topic': %s", obstacle_map_topic.c_str());
+    }
     frame_name=child_frame;
-    grid_pub = nh.advertise<nav_msgs::OccupancyGrid>("grid", 1); // (Topic Name, Queue Size)
+    grid_pub = nh.advertise<nav_msgs::OccupancyGrid>(obstacle_map_topic, 1); // (Topic Name, Queue Size)
     
-    ros::Subscriber sub_1 = nh.subscribe("/test_scan", 1, msgs_to_grid); // 订阅sensor_msgs/LaserScan 并转换(Topic Name, Queue Size, Callback Function)
+    ros::Subscriber sub_1 = nh.subscribe(lidar_topic, 1, msgs_to_grid); // 订阅sensor_msgs/LaserScan 并转换(Topic Name, Queue Size, Callback Function)
     ros::Subscriber sub_2 = nh.subscribe("odom", 10, &odom_callback);//订阅mav_msgs/Odometry
     ros::Rate rate(100);
     while(ros::ok){
         if(get_scan){
             auto start_ = std::chrono::high_resolution_clock::now();
-            printf("get_scan");
+            // printf("get_scan");
             // 声明grid变量
             nav_msgs::OccupancyGrid grid;
 
@@ -367,7 +379,7 @@ int main(int argc, char **argv)
             auto end_ = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> diff = end_-start_;
 
-            std::cout << "Time difference: " << diff.count() << " s\n";
+            // std::cout << "Time difference: " << diff.count() << " s\n";
             grid_pub.publish(grid);
             get_scan=0;
         }

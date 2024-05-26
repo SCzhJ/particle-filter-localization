@@ -15,16 +15,27 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
 
     // Set the header information
     transformStamped.header.stamp = ros::Time::now();
-    transformStamped.header.frame_id = v_frame;
-    transformStamped.child_frame_id = g_frame;
+    transformStamped.header.frame_id = g_frame;
+    transformStamped.child_frame_id = v_frame;
 
     // Set the translation to zero
     transformStamped.transform.translation.x = 0.0;
     transformStamped.transform.translation.y = 0.0;
     transformStamped.transform.translation.z = 0.0;
+    tf2::Quaternion q(
+        msg->pose.pose.orientation.x,
+        msg->pose.pose.orientation.y,
+        msg->pose.pose.orientation.z,
+        msg->pose.pose.orientation.w
+    );
+    q = q.inverse();
 
     // Set the rotation from the odometry message
-    transformStamped.transform.rotation = msg->pose.pose.orientation;
+    // transformStamped.transform.rotation = msg->pose.pose.orientation;
+    transformStamped.transform.rotation.x = q.x();
+    transformStamped.transform.rotation.y = q.y();
+    transformStamped.transform.rotation.z = q.z();
+    transformStamped.transform.rotation.w = q.w();
 
     // Create a TransformBroadcaster object
     tf2_ros::TransformBroadcaster tfb;
@@ -81,7 +92,7 @@ int main(int argc, char** argv){
     transformStamped1.transform.rotation.z = q.z();
     transformStamped1.transform.rotation.w = q.w();
 
-    ros::Rate rate(100.0);
+    ros::Rate rate(20.0);
     while (nh.ok()){
         transformStamped1.header.stamp = ros::Time::now();
         broadcaster.sendTransform(transformStamped1);

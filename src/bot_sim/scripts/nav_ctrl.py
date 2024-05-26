@@ -33,7 +33,7 @@ class NavCtrl:
     def __init__(self, trajectories: List[trajObject], cost_map_path: str, dyn_map_name: str,
                  dt: float, traj_cut_percentage: float = 0.5, iter_percentage: float = 0.5,
                  pathfollowext_percentage: float = 0.8, cmd_vel_topic: str = "/cmd_vel",
-                 within_point: float = 0.7, within_goal: float = 0.5, cost_method: str = "omni"):
+                 within_point: float = 0.6, within_goal: float = 0.4, cost_method: str = "omni"):
         self._action_name = "nav_ctrl"
         self._as = actionlib.SimpleActionServer(self._action_name, NavActionAction, execute_cb=self.nav_to_goal, auto_start = False)
         self._as.start()
@@ -61,7 +61,7 @@ class NavCtrl:
         self.loc_trans = None
         self.robot_frame = rospy.get_param("~robot_frame")
         self.world_frame = rospy.get_param("~world_frame")
-        self.tf_buffer = tf2_ros.Buffer(rospy.Duration(1200.0)) # tf buffer length
+        self.tf_buffer = tf2_ros.Buffer(rospy.Duration(120.0)) # tf buffer length
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
         
         # Path Control
@@ -99,7 +99,7 @@ class NavCtrl:
     def update_location(self):
         try:
             self.loc_tran = self.tf_buffer.lookup_transform(self.world_frame, self.robot_frame,
-                                                    rospy.Time.now(), rospy.Duration(1.0))#写成两个param
+                                                    rospy.Time.now(), rospy.Duration(10.0))#写成两个param
             for traj in self.trajectories:
                 traj.CalcWorldFramePoses(self.loc_tran.transform)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
@@ -143,8 +143,11 @@ class NavCtrl:
                                      (goal.goal_y - self.loc_tran.transform.translation.y)**2)
             dist_to_goal = zero_progress
             
-        path_get = self.call_rrt_star(self.loc_tran.transform.translation.x, 
-                                      self.loc_tran.transform.translation.y, goal.goal_x, goal.goal_y)
+        # path_get = self.call_rrt_star(self.loc_tran.transform.translation.x, 
+        #                                self.loc_tran.transform.translation.y, goal.goal_x, goal.goal_y)
+        path_get = 1
+        self.path = [Point(goal.goal_x, goal.goal_y, 0)]
+        self.path_len = 1
         if path_get != 1:
             rospy.logerr("path not found")
             return -1
@@ -225,7 +228,10 @@ if __name__=="__main__":
     dt = 0.2
     # trajectories = TrajectoryMode.DifferentialDriveTrajectory(x_vel=0.5, omega_increment=0.1, num_of_traj_one_side=7) + \
     #     TrajectoryMode.DifferentialDriveTrajectory(x_vel=-0.5, omega_increment=0.1, num_of_traj_one_side=7)
-    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.2, num_of_traj=25) + TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=20) + TrajectoryMode.ShiftTrajectories(linear_vel=0.6, num_of_traj=15) + TrajectoryMode.ShiftTrajectories(linear_vel=0.4, num_of_traj=10)
+    trajectories = TrajectoryMode.ShiftTrajectories(linear_vel=1.3, num_of_traj=25) + \
+            TrajectoryMode.ShiftTrajectories(linear_vel=1.0, num_of_traj=20) + \
+            TrajectoryMode.ShiftTrajectories(linear_vel=0.6, num_of_traj=15) + \
+            TrajectoryMode.ShiftTrajectories(linear_vel=1.6, num_of_traj=21)
 
     for traj in trajectories:
         TrajectoryMode.GenTrajectory(traj, 0.05, record_every_iter=1, iteration=10)

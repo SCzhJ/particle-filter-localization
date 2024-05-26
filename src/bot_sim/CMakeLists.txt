@@ -8,10 +8,9 @@ add_compile_options(-std=c++14)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
-# set(glog_DIR /usr/lib/x86_64-linux-gnu/cmake/kin)
-
 set(Glog_DIR "/opt/glog/lib/cmake/glog/")
 list(APPEND CMAKE_PREFIX_PATH "/opt/glog/lib/cmake/glog")
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
@@ -30,9 +29,6 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
   Glog REQUIRED
 )
-include_directories(/opt/glog/include)
-# find_package (glog 0.3.4)
-
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -173,8 +169,8 @@ add_executable(dbscan_bfs src/dbscan_bfs.cpp)
 add_executable(dbscan_bfs_3D src/dbscan_bfs_3D.cpp)
 add_executable(threeD_lidar_test src/threeD_lidar_test.cpp)
 add_executable(ser2msg_write_only src/ser2msg_write_only.cpp)
+add_executable(transform_listener src/transform_listener.cpp)
 add_executable(dstarlite src/dstarlite.cpp)
-
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -189,7 +185,6 @@ target_link_libraries(scan_2_node
 )
 target_link_libraries(real_robot_transform
   ${catkin_LIBRARIES}
-  ${GLOG_LIBRARIES}
 )
 target_link_libraries(real_robot_transform_3d
   ${catkin_LIBRARIES}
@@ -224,6 +219,9 @@ target_link_libraries(threeD_lidar_test
   ${catkin_LIBRARIES}
 )
 target_link_libraries(ser2msg_write_only
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(transform_listener
   ${catkin_LIBRARIES}
 )
 target_link_libraries(dstarlite

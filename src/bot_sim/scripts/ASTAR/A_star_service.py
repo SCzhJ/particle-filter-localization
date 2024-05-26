@@ -341,8 +341,6 @@ def response_function(msg):
     rx, ry = a_star.planning(sx, sy, x_goal, y_goal)
     rospy.loginfo("Astar Planning Done")
     path=[]
-    last=Point()
-    last.z=-114514
     for i in range(0,len(rx)):
         x=rx[i]
         y=ry[i]
@@ -353,11 +351,9 @@ def response_function(msg):
         if(i!=len(rx)-1):
             p.z = calculate_angle(x, y, rx[i+1], ry[i+1])
         else:
-            p.z = -114514
-        if(last.z!=p.z):
-            path_marker.points.append(p)
-            path.append(p)
-        last=p
+            p.z = 0
+        path_marker.points.append(p)
+        path.append(p)
     Pointlist = AstarResponse()
     Pointlist.path = path
     path_pub.publish(path_marker)

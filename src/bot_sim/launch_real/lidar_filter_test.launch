@@ -6,15 +6,32 @@
       <param name="max_angle" type="double" value="1.2" />
   </node> -->
   <node pkg="bot_sim" type="threeD_lidar_test" name="threeD_lidar_test" output="screen">
+      <remap from="test_scan" to="/test_test_scan"/>
+      <param name="base_frame" type="string" value="gimbal_frame" />
+      <param name="laser_frame" type="string" value="aft_mapped" />
+      <param name="scan_topic_left" type="string" value="/livox/lidar_192_168_1_3" />
+      <param name="scan_topic_right" type="string" value="/livox/lidar_192_168_1_141" />
+      <param name="new_scan_topic" type="string" value="/3Dlidar" />
+      <param name="first_RADIUS" type="double" value="0.22" />
+      <param name="second_RADIUS" type="double" value="0.35" />
+      <param name="start_height" type="double" value="0.2" />
+      <param name="max_height" type="double" value="0.3" />
+      <param name="slope_1" type="double" value="0.6" />
+      <param name="slope_2" type="double" value="0.3" />
+      <param name="slope_3" type="double" value="0.2" />
+
+</node>
+  <!-- <node pkg="bot_sim" type="threeD_lidar_filter" name="threeD_lidar_filter" output="screen">
+      <remap from="test_scan" to="/test_test_scan"/>
       <param name="base_frame" type="string" value="gimbal_frame" />
       <param name="laser_frame" type="string" value="aft_mapped" />
       <param name="scan_topic_left" type="string" value="/livox/lidar_192_168_1_3" />
       <param name="scan_topic_right" type="string" value="/livox/lidar_192_168_1_141" />
       <param name="new_scan_topic" type="string" value="/3Dlidar" />
       <param name="first_RADIUS" type="double" value="0.25" />
-      <param name="second_RADIUS" type="double" value="0.5" />
-      <param name="first_DEP" type="double" value="0.2" />
-      <param name="second_DEP" type="double" value="0.3" />
-
-  </node>
+      <param name="second_RADIUS" type="double" value="0.35" />
+      <param name="start_height" type="double" value="0.2" />
+      <param name="slope" type="double" value="0.6" />
+      <param name="max_height" type="double" value="0.3" />
+  </node> -->
 </launch>

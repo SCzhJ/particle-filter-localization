@@ -15,13 +15,27 @@
 #include <bot_sim/testConfig.h>
 
 
-float RADIUS, max_z, min_z;
+double first_RADIUS;
+double second_RADIUS, max_height, start_height;
 
+double slope_1,slp_first_RADIUS, height_1;
+double slope_2, slp_second_RADIUS, height_2;
+double slope_3,slp_third_RADIUS, height_3;
 void callback(bot_sim::testConfig &config, uint32_t level) {
-    RADIUS=config.radius;
-    max_z=config.max_z;
-    min_z=config.min_z;
+    first_RADIUS=config.first_RADIUS;
+    second_RADIUS=config.second_RADIUS;
+    max_height=config.max_height;
+    start_height=config.start_height;
+    slope_1=config.slope_1;
+    slope_2=config.slope_2;
+    slope_3=config.slope_3;
+    slp_first_RADIUS=config.slp_first_RADIUS;
+    slp_second_RADIUS=config.slp_second_RADIUS;
+    slp_third_RADIUS=config.slp_third_RADIUS;
+    height_1=max_height+(slp_second_RADIUS-slp_first_RADIUS)*slope_2;
+    height_2=height_1+(slp_third_RADIUS-slp_second_RADIUS)*slope_3;
 }
+
 bool get_msg = 0;
 std::string base_frame;
 std::string laser_frame;
@@ -42,12 +56,37 @@ void scanCallback_right(const livox_ros_driver2::CustomMsg &scan)
     scan_copy_right = scan;
     get_msg = 1;
 }
-double max_dis=0,max_height=0;
+double max_dis=0;
 std::vector<double> distances;
 bool satisfied(double nx, double ny, double z){
+    if(nx*nx+ny*ny <= first_RADIUS*first_RADIUS){
+        // if(z>0.1)printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
+        return 0;
+    }
+    if(nx*nx+ny*ny <= second_RADIUS*second_RADIUS){
+        // printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
+        if(0.3<=z&&z<=0.35){
+            distances.push_back(nx*nx+ny*ny);
+            max_dis=std::max(max_dis,nx*nx+ny*ny);
+            // printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
+        }
+        return z<=start_height;
+    }
+    //three circular truncated cone
+    if(nx*nx+ny*ny <=slp_first_RADIUS * slp_first_RADIUS){
+        double dis=sqrt(nx*nx+ny*ny)-second_RADIUS;
+        return z<=std::min(max_height,dis*slope_1+start_height);//max_height for security
+    }
+    
+    if(nx*nx+ny*ny <=slp_second_RADIUS * slp_second_RADIUS){
+        double dis=sqrt(nx*nx+ny*ny)-slp_first_RADIUS;
+        return z<=std::min(height_1,dis*slope_2+max_height);
+    }
 
-    max_dis=std::max(max_dis,z);
-    return nx*nx+ny*ny<=RADIUS*RADIUS && min_z<=z&&z<=max_z;
+    double dis=sqrt(nx*nx+ny*ny)-slp_second_RADIUS;
+    return z<=std::min(height_2,dis*slope_3+height_1);
+    
+
 }
 
 int main(int argc, char **argv)

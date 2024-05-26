@@ -3,14 +3,14 @@
   <node pkg="bot_sim" type="nav_ctrl.py" name="nav_ctrl" output="screen" >
     <param name="world_frame" value="map"/>
     <param name="robot_frame" value="virtual_frame"/>
-    <param name="cost_map_path" value="/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/DWA/CostMap/Event_hall_Mar_19" />
+    <param name="cost_map_path" value="/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/DWA/CostMap/RMUL" />
     <param name="dyn_map_name" value="/grid"/>
   </node>
   <node pkg="bot_sim" type="NavClient.py" name="NavClient" output="screen" />
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find bot_sim)/config/rviz/gazebo_laserbot.rviz" />
 
   <node pkg="bot_sim" type="RRT_star_srv.py" name="RRT_star_srv">
-    <param name="map_name" type="string" value="Event_hall_Mar_19" />
+    <param name="map_name" type="string" value="RMUL" />
   </node>
 
   <!-- <node pkg="bot_sim" type="wavefront" name="wavefront" output="screen">

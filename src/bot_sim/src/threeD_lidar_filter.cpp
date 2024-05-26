@@ -158,7 +158,6 @@ int main(int argc, char **argv)
             double ny = point_out.y();
             double nz = point_out.z();
             if (satisfied(nx,ny,z))
-            if (satisfied(nx,ny,z))
             {
                 scan_new.points.push_back(scan_record_left.points[i]);
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
@@ -181,8 +180,8 @@ int main(int argc, char **argv)
             }
         }
         sort(distances.begin(),distances.end());
-        for(int i=(int)distances.size()-1;i>=0;i--)printf("%lf ",distances[i]);
-        printf("\nmax_dis: %f\n----------------------\n",max_dis);
+        // for(int i=(int)distances.size()-1;i>=0;i--)printf("%lf ",distances[i]);
+        // printf("\nmax_dis: %f\n----------------------\n",max_dis);
         scan_new.header.stamp = ros::Time::now();
         scan_new.point_num = scan_new.points.size();
         pub.publish(scan_new);
