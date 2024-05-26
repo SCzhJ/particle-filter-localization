@@ -10,8 +10,8 @@ add_compile_options(-std=c++14)
 
 # set(glog_DIR /usr/lib/x86_64-linux-gnu/cmake/kin)
 
-
-list(APPEND CMAKE_PREFIX_PATH "/usr/lib/x86_64-linux-gnu/")
+set(Glog_DIR "/opt/glog/lib/cmake/glog/")
+list(APPEND CMAKE_PREFIX_PATH "/opt/glog/lib/cmake/glog")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
@@ -28,11 +28,9 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
   livox_ros_driver2
   dynamic_reconfigure
-  # Glog REQUIRED
-  # Ceres REQUIRED
-  # Glog REQUIRED
+  Glog REQUIRED
 )
-
+include_directories(/opt/glog/include)
 # find_package (glog 0.3.4)
 
 
@@ -164,7 +162,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(scan_2_node src/scan_2_node.cpp)
 add_executable(real_robot_transform src/real_robot_transform.cpp)
-# add_executable(real_robot_transform_3d src/real_robot_transform_3d.cpp include/bot_sim/EKF.h)
+add_executable(real_robot_transform_3d src/real_robot_transform_3d.cpp include/bot_sim/EKF.h)
 add_executable(cmd2ser src/cmd2ser.cpp)
 add_executable(ser2msg src/ser2msg.cpp)
 add_executable(wavefront src/wavefront.cpp)
@@ -191,11 +189,13 @@ target_link_libraries(scan_2_node
 )
 target_link_libraries(real_robot_transform
   ${catkin_LIBRARIES}
+  ${GLOG_LIBRARIES}
 )
-# target_link_libraries(real_robot_transform_3d
-#   ${catkin_LIBRARIES}
-#   Glog::Glog
-# )
+target_link_libraries(real_robot_transform_3d
+  ${catkin_LIBRARIES}
+  ${GLOG_LIBRARIES}
+  glog::glog
+)
 target_link_libraries(cmd2ser
   ${catkin_LIBRARIES}
 )

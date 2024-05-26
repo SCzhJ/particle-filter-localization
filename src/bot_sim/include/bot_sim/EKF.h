@@ -1,6 +1,5 @@
 #ifndef EKF_H
 #define EKF_H
-#include <glog/logging.h>
 #include <ceres/ceres.h>
 #include <Eigen/Eigen>
 #include <Eigen/src/Core/Matrix.h>
