@@ -322,9 +322,8 @@ void dstarlite::when_receive_new_dynamic_map(nav_msgs::OccupancyGrid::ConstPtr d
             changed_obstacle_nodes.erase(map[x][y]);
             map[x][y]->round_for_dynamic_map = for_dynamic_map_round;
             changed_obstacle_nodes.insert(map[x][y]);
-            if(dynamic_map_msg->data[index] != map[x][y]->obstacle_possibility && dynamic_map_msg->data[index] >= map[x][y]->static_obstacle_possibility){
+            if(dynamic_map_msg->data[index] != map[x][y]->obstacle_possibility){
                 map[x][y]->obstacle_possibility = dynamic_map_msg->data[index];
-                // ROS_INFO("map:[%d][%d]->obstacle_possibility=%lf",x,y ,map[x][y]->obstacle_possibility);
                 dstar_update_node(map[x][y]);
             }
         }
@@ -520,12 +519,11 @@ void dstarlite::publish_all_map_status(ros::Publisher& pub){
         for(int j = 0; j < max_y; j++){
             int index = i + j * max_x;
             // if(map[i][j]->isObstacle)all_map_status.data[index] = 100;
-            // if(map[i][j]->last_out_list_round == round){
-            //     all_map_status.data[index] = 100;
-            //     count++;
-            // }
-            // else all_map_status.data[index] = 0;
-            all_map_status.data[index] = map[i][j]->obstacle_possibility;
+            if(map[i][j]->last_out_list_round == round){
+                all_map_status.data[index] = 100;
+                count++;
+            }
+            else all_map_status.data[index] = 0;
         }
     }
     ROS_ERROR("count: %d", count);

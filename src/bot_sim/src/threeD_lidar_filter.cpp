@@ -13,7 +13,11 @@
 #include <math.h>
 
 double first_RADIUS;
-double second_RADIUS, slope, max_height, start_height;
+double second_RADIUS, max_height, start_height;
+
+double slope_1,slp_first_RADIUS, height_1;
+double slope_2, slp_second_RADIUS, height_2;
+double slope_3,slp_third_RADIUS, height_3;
 
 bool get_msg = 0;
 std::string base_frame;
@@ -35,8 +39,10 @@ void scanCallback_right(const livox_ros_driver2::CustomMsg &scan)
     scan_copy_right = scan;
     get_msg = 1;
 }
+
 double max_dis=0;
 std::vector<double> distances;
+
 bool satisfied(double nx, double ny, double z){
     if(nx*nx+ny*ny <= first_RADIUS*first_RADIUS){
         // if(z>0.1)printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
@@ -51,9 +57,23 @@ bool satisfied(double nx, double ny, double z){
         }
         return z<=start_height;
     }
-    double dis=sqrt(nx*nx+ny*ny)-second_RADIUS;
-    return z<=std::min(max_height,dis*slope+start_height);
+    //three circular truncated cone
+    if(nx*nx+ny*ny <=slp_first_RADIUS * slp_first_RADIUS){
+        double dis=sqrt(nx*nx+ny*ny)-second_RADIUS;
+        return z<=std::min(max_height,dis*slope_1+start_height);//max_height for security
+    }
+    
+    if(nx*nx+ny*ny <=slp_second_RADIUS * slp_second_RADIUS){
+        double dis=sqrt(nx*nx+ny*ny)-slp_first_RADIUS;
+        return z<=std::min(height_1,dis*slope_2+max_height);
+    }
+
+    double dis=sqrt(nx*nx+ny*ny)-slp_second_RADIUS;
+    return z<=std::min(height_2,dis*slope_3+height_1);
+    
+
 }
+
 int main(int argc, char **argv)
 {
     std::string node_name = "threeD_lidar_filter";
@@ -105,11 +125,37 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to retrieve parameter 'start_height'");
         return -1;
     }
-    if (!nh.getParam("/" + node_name + "/slope", slope))
+    if (!nh.getParam("/" + node_name + "/slope_1", slope_1))
     {
-        ROS_ERROR("Failed to retrieve parameter 'slope'");
+        ROS_ERROR("Failed to retrieve parameter 'slope_1'");
         return -1;
     }
+    if (!nh.getParam("/" + node_name + "/slope_2", slope_2))
+    {
+        ROS_ERROR("Failed to retrieve parameter 'slope_2'");
+        return -1;
+    }
+    if (!nh.getParam("/" + node_name + "/slope_3", slope_3))
+    {
+        ROS_ERROR("Failed to retrieve parameter 'slope_3'");
+        return -1;
+    }
+    if (!nh.getParam("/" + node_name + "/slp_first_RADIUS", slp_first_RADIUS))
+    {
+        ROS_ERROR("Failed to retrieve parameter 'slp_first_RADIUS'");
+        return -1;
+    }
+    if (!nh.getParam("/" + node_name + "/slp_second_RADIUS", slp_second_RADIUS))
+    {
+        ROS_ERROR("Failed to retrieve parameter 'slp_second_RADIUS'");
+        return -1;
+    }
+    if (!nh.getParam("/" + node_name + "/slp_third_RADIUS", slp_third_RADIUS))
+    {
+        ROS_ERROR("Failed to retrieve parameter 'slp_third_RADIUS'");
+        return -1;
+    }
+
 
     ros::Subscriber sub_left = nh.subscribe(scan_topic_left, 1, scanCallback_left);
     ros::Subscriber sub_right = nh.subscribe(scan_topic_right, 1, scanCallback_right);

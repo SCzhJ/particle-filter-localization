@@ -28,7 +28,7 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
         msg->pose.pose.orientation.z,
         msg->pose.pose.orientation.w
     );
-    q = q.inverse();
+    // q = q.inverse();
 
     // Set the rotation from the odometry message
     // transformStamped.transform.rotation = msg->pose.pose.orientation;
