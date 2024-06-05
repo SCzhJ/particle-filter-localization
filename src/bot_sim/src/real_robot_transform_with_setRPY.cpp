@@ -34,24 +34,9 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
     // q = q.inverse();
     // 3d
     qpl = q;
-
-    //
-    // // 将四元数旋转应用到一个初始向量
-    // tf2::Vector3 initial_vector(1, 0, 0);
-    // tf2::Vector3 rotated_vector = tf2::quatRotate(qpl, initial_vector);
-
-    // // 计算旋转后的向量在XY平面上的投影
-    // tf2::Vector3 projected_vector(rotated_vector.x(), rotated_vector.y(), 0);
-
-    // // 计算这个投影向量和初始向量之间的旋转
-    // tf2::Quaternion q_correction;
-    // q_correction.setRPY(0, 0, -atan2(projected_vector.y(), projected_vector.x()));
-
-    // // 将这个旋转应用到原始的四元数旋转
-    // qpl = qpl * q_correction;
-    tf2::Matrix3x3 m(qpl);
+    tf2::Matrix3x3 m(q);
     double roll, pitch, yaw;
-    m.getRPY(roll, pitch, yaw);
+    m.getYPR(roll, pitch, yaw);
     qpl.setRPY(roll, pitch, 0);
     qpl = qpl.inverse();
     // Set the rotation from the odometry message
@@ -115,7 +100,7 @@ int main(int argc, char** argv){
     while (nh.ok()){
         if(received_msg){
             transformStamped1.header.stamp = ros::Time::now();
-            auto q =  qpl  * qz ;
+            auto q = qpl * qx * qz;
             transformStamped1.transform.rotation.x = q.x();
             transformStamped1.transform.rotation.y = q.y();
             transformStamped1.transform.rotation.z = q.z();

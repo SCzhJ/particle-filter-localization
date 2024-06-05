@@ -44,7 +44,7 @@ double max_dis=0;
 std::vector<double> distances;
 
 bool satisfied(double nx, double ny, double z){
-    // return 1;
+    return 1;
     if(nx*nx+ny*ny <= first_RADIUS*first_RADIUS){
         // if(z>0.1)printf("x: %f, y: %f, z: %f, dis: %f\n", nx, ny, z, nx*nx+ny*ny);
         return 0;
@@ -160,6 +160,7 @@ int main(int argc, char **argv)
 
     ros::Subscriber sub_left = nh.subscribe(scan_topic_left, 1, scanCallback_left);
     ros::Subscriber sub_right = nh.subscribe(scan_topic_right, 1, scanCallback_right);
+    pub = nh.advertise<livox_ros_driver2::CustomMsg>(new_scan_topic, 1);
     ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2>("test_scan", 1);
 
     tf2_ros::Buffer tfBuffer;
@@ -186,8 +187,10 @@ int main(int argc, char **argv)
         }
         max_dis=0;
         distances.clear();
+        auto scan_new = scan_copy_right;
         auto scan_record_left = scan_copy_left;
         auto scan_record_right = scan_copy_right;
+        scan_new.points.clear();
         pcl_cloud.points.clear();
         tf2::Transform tf_transform;
         tf2::fromMsg(transformStamped.transform, tf_transform);
@@ -201,6 +204,7 @@ int main(int argc, char **argv)
             double nx = point_out.x();
             double ny = point_out.y();
             double nz = point_out.z();
+            scan_new.points.push_back(scan_record_left.points[i]);
             if (satisfied(nx,ny,z))
             {
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
@@ -216,6 +220,7 @@ int main(int argc, char **argv)
             double nx = point_out.x();
             double ny = point_out.y();
             double nz = point_out.z();
+            scan_new.points.push_back(scan_record_right.points[i]);
             if (satisfied(nx,ny,z))
             {
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
@@ -224,6 +229,10 @@ int main(int argc, char **argv)
         sort(distances.begin(),distances.end());
         // for(int i=(int)distances.size()-1;i>=0;i--)printf("%lf ",distances[i]);
         // printf("\nmax_dis: %f\n----------------------\n",max_dis);
+        scan_new.header.stamp = ros::Time::now();
+        scan_new.point_num = scan_new.points.size();
+        pub.publish(scan_new);
+
         // For testing
         sensor_msgs::PointCloud2 output;
         pcl::toROSMsg(pcl_cloud, output);

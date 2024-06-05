@@ -12,7 +12,6 @@
 #include<queue>
 #include<stack>
 #include<set>
-#include<math.h>
 #define INF 1e9
 #define NEW 0
 #define IN_LIST 1
@@ -216,7 +215,7 @@ dstarlite::dstarlite(std::string map_topic){
         velocity = 0.8;
         x0 = 75;
         k = 0.25;
-        L = 5; 
+        L = 3; 
         x01 = 75;
         k1 = -0.08;
         L1 = velocity;
@@ -323,12 +322,11 @@ void dstarlite::when_receive_new_dynamic_map(nav_msgs::OccupancyGrid::ConstPtr d
             changed_obstacle_nodes.erase(map[x][y]);
             map[x][y]->round_for_dynamic_map = for_dynamic_map_round;
             changed_obstacle_nodes.insert(map[x][y]);
-            // if(dynamic_map_msg->data[index] != map[x][y]->obstacle_possibility && dynamic_map_msg->data[index] >= map[x][y]->static_obstacle_possibility){
-            double new_obtacle_possibility_rate = 1.0/8;
-            map[x][y]->obstacle_possibility = new_obtacle_possibility_rate * std::max((double)dynamic_map_msg->data[index], map[x][y]->static_obstacle_possibility) + (1 - new_obtacle_possibility_rate) * map[x][y]->obstacle_possibility;
-            // ROS_INFO("map:[%d][%d]->obstacle_possibility=%lf",x,y ,map[x][y]->obstacle_possibility);
-            dstar_update_node(map[x][y]);
-            // }
+            if(dynamic_map_msg->data[index] != map[x][y]->obstacle_possibility && dynamic_map_msg->data[index] >= map[x][y]->static_obstacle_possibility){
+                map[x][y]->obstacle_possibility = dynamic_map_msg->data[index];
+                // ROS_INFO("map:[%d][%d]->obstacle_possibility=%lf",x,y ,map[x][y]->obstacle_possibility);
+                dstar_update_node(map[x][y]);
+            }
         }
     }
     while(!changed_obstacle_nodes.empty()){
@@ -351,15 +349,9 @@ void dstarlite::dstar_update_node(Nodeptr cur){
     }
     Nodeptr previous_succ = cur->succ;
     double previous_rhs = cur->rhs;
-    double ox = 0, oy = 0, min_acceptable_val = 0;
     cur->manhattan_dis_to_start = abs(cur->x - start_node->x) + abs(cur->y - start_node->y) + d_manhattan_dis_to_start;
     cur->rhs = INF;
     cur->succ = nullptr;
-    if(previous_succ != nullptr){
-        ox = previous_succ->x;
-        oy = previous_succ->y;
-        min_acceptable_val = 0.1;
-    }
     for(int i = 0; i < 8; i++){
         int nx = cur->x + dx[i];
         int ny = cur->y + dy[i];
@@ -367,7 +359,7 @@ void dstarlite::dstar_update_node(Nodeptr cur){
         double value = calculate_edge_value(cur)*calculate_edge_value(map[nx][ny]);
         if(value < 1)ROS_ERROR("sfdassglkhaekl;erjtskl;jkl;m;lsdsg");
         double new_rhs = i<4?map[nx][ny]->dis_to_goal + value : map[nx][ny]->dis_to_goal + 1.414 * value;
-        if(new_rhs + sqrt((nx - ox) * (nx - ox) + (ny - oy) * (ny - oy) * value) * min_acceptable_val < cur->rhs){
+        if(new_rhs < cur->rhs){
             cur->rhs = new_rhs;
             cur->succ = map[nx][ny];
         }
@@ -471,13 +463,8 @@ void dstarlite::publish(ros::Publisher& pub, std::string map_frame_name, ros::Pu
     if(cur == nullptr || final_goal_node == nullptr) ROS_ERROR("?????");
     if(lct->find_root(cur) == lct->find_root(final_goal_node)){
         // ROS_INFO("cur->succ:%p cur:%p root(cur)%p goal%p root(goal)%p", cur->succ, cur, lct->find_root(cur), final_goal_node, lct->find_root(final_goal_node));
-        Nodeptr final_aim = cur;
-        for(int i = 0; i < 8; i++){
-            if(final_aim->succ == nullptr)break;
-            final_aim = final_aim->succ;
-        }
-        double dx = final_aim->x - cur->x;
-        double dy = final_aim->y - cur->y;
+        double dx = cur->succ->x - cur->x;
+        double dy = cur->succ->y - cur->y;
         double dis = sqrt(dx * dx + dy * dy);
         double new_velocity = calculate_velocity(cur);
         cmd_vel.linear.x = dx / dis * new_velocity;

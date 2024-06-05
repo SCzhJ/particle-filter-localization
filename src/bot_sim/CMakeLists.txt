@@ -165,12 +165,14 @@ add_executable(wavefront src/wavefront.cpp)
 add_executable(test_transform src/test_transform.cpp)
 add_executable(lidar_filter src/lidar_filter.cpp)
 add_executable(threeD_lidar_filter src/threeD_lidar_filter.cpp)
+add_executable(threeD_lidar_merge src/threeD_lidar_merge.cpp)
 add_executable(dbscan_bfs src/dbscan_bfs.cpp)
 add_executable(dbscan_bfs_3D src/dbscan_bfs_3D.cpp)
 add_executable(threeD_lidar_test src/threeD_lidar_test.cpp)
 add_executable(ser2msg_write_only src/ser2msg_write_only.cpp)
 add_executable(transform_listener src/transform_listener.cpp)
 add_executable(dstarlite src/dstarlite.cpp)
+add_executable(likelihood_field src/likelihood_field.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -209,6 +211,9 @@ target_link_libraries(lidar_filter
 target_link_libraries(threeD_lidar_filter
   ${catkin_LIBRARIES}
 )
+target_link_libraries(threeD_lidar_merge
+  ${catkin_LIBRARIES}
+)
 target_link_libraries(dbscan_bfs
   ${catkin_LIBRARIES}
 )
@@ -225,6 +230,9 @@ target_link_libraries(transform_listener
   ${catkin_LIBRARIES}
 )
 target_link_libraries(dstarlite
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(likelihood_field
   ${catkin_LIBRARIES}
 )
 ## Add cmake target dependencies of the executable

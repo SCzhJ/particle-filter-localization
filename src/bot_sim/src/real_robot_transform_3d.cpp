@@ -26,7 +26,7 @@ tf2::Quaternion qekf2;
 tf2::Quaternion qpl;
 
 std::deque<sensor_msgs::Imu::ConstPtr> imu_buffer;
-double time_window = 0.5;  // 窗口
+double time_window = 0.1;  // 窗口
 
 void odometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
@@ -53,7 +53,7 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
     tf2_ros::TransformBroadcaster tfb;
 
     // Broadcast the transform
-    tfb.sendTransform(transformStamped);
+    // tfb.sendTransform(transformStamped);
 }
 
 void chatterCallback(const sensor_msgs::Imu::ConstPtr &imu_ptr) {
@@ -162,11 +162,11 @@ int main(int argc, char** argv){
     ros::Rate rate(100.0);  
     while (nh.ok()){
         transformStamped1.header.stamp = ros::Time::now();
-        broadcaster.sendTransform(transformStamped1);
+        // broadcaster.sendTransform(transformStamped1);
         //---------------------------------test---------------------------------
         
         visualization_msgs::Marker marker;
-        marker.header.frame_id = "/gimbal_frame";
+        marker.header.frame_id = "gimbal_frame";
         marker.header.stamp = ros::Time::now();
 
         marker.ns = "my_namespace";
@@ -177,14 +177,15 @@ int main(int argc, char** argv){
         marker.pose.position.x = 0;
         marker.pose.position.y = 0;
         marker.pose.position.z = 0;
-        // marker.pose.orientation.x = qekf1.x();
-        // marker.pose.orientation.y = qekf1.y();
-        // marker.pose.orientation.z = qekf1.z();
-        // marker.pose.orientation.w = qekf1.w();
-         marker.pose.orientation.x = qpl.x();
-        marker.pose.orientation.y = qpl.y();
-        marker.pose.orientation.z = qpl.z();
-        marker.pose.orientation.w = qpl.w();
+
+        marker.pose.orientation.x = qekf1.x();
+        marker.pose.orientation.y = qekf1.y();
+        marker.pose.orientation.z = qekf1.z();
+        marker.pose.orientation.w = qekf1.w();
+        //  marker.pose.orientation.x = qpl.x();
+        // marker.pose.orientation.y = qpl.y();
+        // marker.pose.orientation.z = qpl.z();
+        // marker.pose.orientation.w = qpl.w();
 
         marker.scale.x = 1.0;
         marker.scale.y = 0.2;

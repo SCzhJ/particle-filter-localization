@@ -7,7 +7,7 @@ if(__name__ == '__main__'):
     Pub1 = rospy.Publisher('initialpose', PoseWithCovarianceStamped, queue_size=10)
     Pub2 = rospy.Publisher('clicked_point', PointStamped, queue_size=10)
     rospy.sleep(1.0)
-    rate = rospy.Rate(0.1)
+    rate = rospy.Rate(0.05)
     pose = PoseWithCovarianceStamped()
     pose.header.frame_id = 'map'
     pose.header.stamp = rospy.Time.now()
@@ -27,14 +27,14 @@ if(__name__ == '__main__'):
         if(count & 1):
             pose2.header.frame_id = 'map'
             pose2.header.stamp = rospy.Time.now()
-            pose2.point.x = 2.3147521018981934
-            pose2.point.y = -2.5746066570281982
+            pose2.point.x = 1.3168221712112427
+            pose2.point.y = 2.8415262699127197
             pose2.point.z = 0.0
         else:
             pose2.header.frame_id = 'map'
             pose2.header.stamp = rospy.Time.now()
-            pose2.point.x = 0.2978338599205017
-            pose2.point.y = -0.25365519523620605
+            pose2.point.x = 0.029756687581539154
+            pose2.point.y = -1.8023000955581665
             pose2.point.z = 0.0
         Pub2.publish(pose2)
         rate.sleep()
