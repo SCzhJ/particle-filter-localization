@@ -1,6 +1,0 @@
-<launch>
-
-  <node pkg="bot_sim" type="LidarMonitor.py" name="lidar_monitor" output="screen" >
-  </node>
-
-</launch>
