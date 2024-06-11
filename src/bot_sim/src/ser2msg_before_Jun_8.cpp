@@ -8,13 +8,12 @@
 #include <tf2_ros/buffer.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include<geometry_msgs/PointStamped.h>
 
 const double PI = 3.14159265358979323846;
 
 serial::Serial ser;
 const int write_length = 13;
-const int read_length = 11;
+const int read_length = 10;
 
 geometry_msgs::TransformStamped transformRotbaseToVirtual;
 geometry_msgs::TransformStamped transformGimbalToRotbase;
@@ -37,19 +36,13 @@ public:
     // float past_relative_angle;
     float imu_angle;
     float relative_angle;
-    int goal_type;
     bool readFromBuffer(std::vector<uint8_t>& buffer) {
         if (buffer.size() < read_length) {
-            // ROS_INFO("Not enough data available from the serial port, current buffer size: %d", buffer.size());
             return false; // Not enough data, 
         }
         else if (buffer[0] == SOF && buffer[read_length-1] == eof) {
             memcpy(&this->relative_angle, &buffer[1], sizeof(float));
             memcpy(&this->imu_angle, &buffer[5], sizeof(float));
-            char temp;
-            memcpy(&temp, &buffer[9], sizeof(char));
-            // ROS_INFO("goal_type: %d", (int)temp);
-            this->goal_type = (int)temp;
             buffer.erase(buffer.begin(), buffer.begin()+read_length);
             // ROS_INFO("Read from buffer");
             return true;
@@ -73,8 +66,7 @@ void cmdVelCallback(const geometry_msgs::Twist::ConstPtr &msg)
     printf("msg_received");
     // std::cout<<cmd_vel.linear.x<<' '<<cmd_vel.linear.y<<std::endl;
 }
-std::pair<double, double> getGoalType[4]={{-0.055942609906196594,0.009506076574325562},{-1.3484139442443848
-,1.6214642524719238},{1.3867688179016113,4.585798740386963},{1.732113003730774,3.1185054779052734}};
+
 int main(int argc, char** argv)
 {
     std::string node_name = "ser2msg";
@@ -156,7 +148,6 @@ int main(int argc, char** argv)
     }
 
     ros::Subscriber sub = nh.subscribe(vel_topic, 1000, cmdVelCallback);
-    ros::Publisher clicked_point_pub=nh.advertise<geometry_msgs::PointStamped>("clicked_point",1);
 
     tf2_ros::TransformBroadcaster tfb;
 
@@ -196,7 +187,6 @@ int main(int argc, char** argv)
     while(ros::ok()){
 
         // Read data from the serial port
-        // ROS_INFO("Reading data from the serial port");
         buffer_recv.clear();
         size_t bytes_available = ser.available();
         if (bytes_available < read_length) {
@@ -263,15 +253,6 @@ int main(int argc, char** argv)
         loc.transform = tf2::toMsg(location);
         loc.header.stamp = ros::Time::now();
         tfb.sendTransform(loc);
-        //send_goal
-        geometry_msgs::PointStamped clicked_point;
-        clicked_point.header.frame_id="map";
-        clicked_point.header.stamp=ros::Time::now();
-        clicked_point.point.x=getGoalType[message.goal_type].first;
-        clicked_point.point.y=getGoalType[message.goal_type].second;
-        clicked_point.point.z=0;
-        // clicked_point_pub.publish(clicked_point);
-        // ROS_INFO("%d",message.goal_type);
         ros::spinOnce();
         rate.sleep();
     }

@@ -213,11 +213,11 @@ dstarlite::dstarlite(std::string map_topic){
         initial_y = msg->info.origin.position.y;
         resolution = msg->info.resolution;
         for_dynamic_map_round = 0;
-        velocity = 0.8;
+        velocity = 1.0;
         x0 = 75;
         k = 0.25;
         L = 5; 
-        x01 = 75;
+        x01 = 80;
         k1 = -0.08;
         L1 = velocity;
         //needcode to initialize max_x and max_y;
@@ -274,6 +274,7 @@ void dstarlite::when_receive_new_goal(geometry_msgs::PointStamped::ConstPtr goal
     int start_x, start_y, goal_x, goal_y;
     goal_x = from_real_x_to_map_x(goal_pose_msg->point.x);
     goal_y = from_real_y_to_map_y(goal_pose_msg->point.y);
+    if(final_goal_node != nullptr&&final_goal_node->x == goal_x && final_goal_node->y == goal_y)return;
     start_x = from_real_x_to_map_x(real_start_x);
     start_y = from_real_y_to_map_y(real_start_y);
     final_goal_node = map[goal_x][goal_y];
