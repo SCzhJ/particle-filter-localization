@@ -39,6 +39,193 @@ int dy[4] = {1, -1, 0, 0};
 int dx2[4] = {1, -1, 1, -1};
 int dy2[4] = {1, 1, -1, -1};
 
+//The obscured point filter
+class obscured_point_filter{
+    public:
+        struct point{
+            int x;
+            int y;
+            double angle, distance;
+            int angle_sort_id, distance_sort_id;
+            int cnt;
+        };
+        class segment_tree{
+            public:
+                class segment_tree_node{
+                    public:
+                        segment_tree_node* left_son, *right_son;
+                        int cnt;
+                        segment_tree_node(){
+                            left_son = right_son = NULL;
+                            cnt = 0;
+                        }
+                };
+                class insert_order{
+                    public:
+                        int x, y;
+                        double angle;
+                        insert_order(int x, int y, double angle){
+                            this->x = x;
+                            this->y = y;
+                            this->angle = angle;
+                        }
+                        bool operator < (const insert_order& other)const{
+                            return angle < other.angle;
+                        }
+                };
+                void build(segment_tree_node* cur, int l, int r){
+                    if(l == r)return;
+                    int mid = (l + r) >> 1;
+                    if(cur->left_son == NULL) cur->left_son = new segment_tree_node();
+                    if(cur->right_son == NULL)cur->right_son = new segment_tree_node();
+                    build(cur->left_son, l, mid);
+                    build(cur->right_son, mid + 1, r);
+                }
+                void kill(segment_tree_node* cur){
+                    if(cur->left_son != NULL)kill(cur->left_son);
+                    if(cur->right_son != NULL)kill(cur->right_son);
+                    delete cur;
+                }
+                segment_tree_node* root;
+                segment_tree(int num_of_points){
+                    root = new segment_tree_node();
+                    build(root, 0, num_of_points - 1);
+                }
+                segment_tree() : root(NULL){}
+                ~segment_tree(){
+                    kill(root);
+                }
+                void insert(segment_tree_node* root, int l, int r, int x){
+                    if(l == r){
+                        root->cnt++;
+                        return;
+                    }
+                    int mid = (l + r) >> 1;
+                    if(x <= mid){
+                        if(root->left_son == NULL)root->left_son = new segment_tree_node();
+                        insert(root->left_son, l, mid, x);
+                    }
+                    else{
+                        if(root->right_son == NULL)root->right_son = new segment_tree_node();
+                        insert(root->right_son, mid + 1, r, x);
+                    }
+                    root->cnt = 0;
+                    if(root->left_son != NULL)root->cnt += root->left_son->cnt;
+                    if(root->right_son != NULL)root->cnt += root->right_son->cnt;
+                }
+                void del(segment_tree_node* root, int l, int r, int x){
+                    if(x < l || x > r)return;
+                    if(l == r){
+                        root->cnt--;
+                        return;
+                    }
+                    int mid = (l + r) >> 1;
+                    if(x <= mid)del(root->left_son, l, mid, x);
+                    else del(root->right_son, mid + 1, r, x);
+                    root->cnt = 0;
+                    if(root->left_son != NULL)root->cnt += root->left_son->cnt;
+                    if(root->right_son != NULL)root->cnt += root->right_son->cnt;
+                }
+                int query(segment_tree_node* root, int l, int r, int x, int y){
+                    if(root == NULL)return 0;
+                    if(x <= l && r <= y)return root->cnt;
+                    int mid = (l + r) >> 1;
+                    int res = 0;
+                    if(x <= mid)res += query(root->left_son, l, mid, x, y);
+                    if(y > mid)res += query(root->right_son, mid + 1, r, x, y);
+                    return res;
+                }
+        }
+        segment_tree* tree;
+        std::vector<point> points;
+        obscured_point_filter(int width, int height, vector<dbscan_Point>& obstacles){
+            this->width = width;
+            this->height = height;
+            for(int i = 0; i < width; i++){
+                for(int j = 0; j < height; j++){
+                    point p;
+                    p.x = i;
+                    p.y = j;
+                    p.angle = atan2(j - height / 2, i - width / 2);
+                    p.distance = sqrt((j - height / 2) * (j - height / 2) + (i - width / 2) * (i - width / 2));
+                    points.push_back(p);
+                }
+            }
+            sort(points.begin(), points.end(), [&](point a, point b){
+                return a.angle < b.angle;
+            });
+            std::vector<double> angle;
+            int angle_cnt = 0;
+            for(int i = 0; i < points.size(); i++){
+                points[i].angle_sort_id = angle_cnt;
+                if(i + 1 == points.size() || points[i + 1].angle != points[i].angle)angle_cnt++;
+            }
+            sort(points.begin(), points.end(), [&](point a, point b){
+                return a.distance < b.distance;
+            });
+            std::vector<double> distance;
+            int distance_cnt = 0;
+            for(int i = 0; i < points.size(); i++){
+                points[i].distance_sort_id = distance_cnt;
+                if(i + 1 == points.size() || points[i + 1].distance != points[i].distance)distance_cnt++;
+            }
+            sort(points.begin(), points.end(), [&](point a, point b){
+                return a.x < b.x || (a.x == b.x && a.y < b.y);
+            });
+            tree=new segment_tree(distance_cnt);
+            std::vector<std::vector<std::pair<int,int> > > angle_add(distance_cnt, 0);
+            for(int i = 0; i < obstacles.size(); i++){
+                int x = obstacles[i].x;
+                int y = obstacles[i].y;
+                double min_angle = min(atan2(y + 0.5 - height / 2, x + 0.5 - width / 2), min(atan2(y + 0.5 - height / 2, x - 0.5 - width / 2), min(atan2(y - 0.5 - height / 2, x + 0.5 - width / 2), atan2(y - 0.5 - height / 2, x - 0.5 - width / 2))));
+                double max_angle = max(atan2(y + 0.5 - height / 2, x + 0.5 - width / 2), max(atan2(y + 0.5 - height / 2, x - 0.5 - width / 2), max(atan2(y - 0.5 - height / 2, x + 0.5 - width / 2), atan2(y - 0.5 - height / 2, x - 0.5 - width / 2))));
+                if(min_angle <= -M_PI){
+                    auto low = std::lower_bound(angle.begin(), angle.end(), -M_PI), up = std::upper_bound(angle.begin(), angle.end(), max_angle);
+                    int low_index = low - angle.begin(), up_index = up - angle.begin() - 1;
+                    angle_add[points[x*width+y].distance_sort_id].push_back({low_index, up_index});
+                    low = std::lower_bound(angle.begin(), angle.end(), min_angle + 2 * M_PI), up = std::upper_bound(angle.begin(), angle.end(), M_PI);
+                    low_index = low - angle.begin(), up_index = up - angle.begin() - 1;
+                    angle_add[points[x*width+y].distance_sort_id].push_back({low_index, up_index});
+                }
+                else if(max_angle > M_PI){
+                    auto low = std::lower_bound(angle.begin(), angle.end(), -M_PI), up = std::upper_bound(angle.begin(), angle.end(), max_angle - 2 * M_PI);
+                    int low_index = low - angle.begin(), up_index = up - angle.begin() - 1;
+                    angle_add[points[x*width+y].distance_sort_id].push_back({low_index, up_index});
+                    low = std::lower_bound(angle.begin(), angle.end(), min_angle), up = std::upper_bound(angle.begin(), angle.end(), M_PI);
+                    low_index = low - angle.begin(), up_index = up - angle.begin() - 1;
+                    angle_add[points[x*width+y].distance_sort_id].push_back({low_index, up_index});
+                }
+                else{
+                    auto low = std::lower_bound(angle.begin(), angle.end(), min_angle), up = std::upper_bound(angle.begin(), angle.end(), max_angle);
+                    int low_index = low - angle.begin(), up_index = up - angle.begin() - 1;
+                    angle_add[points[x*width+y].distance_sort_id].push_back({low_index, up_index});
+                }
+            }
+            sort(points.begin(), points.end(), [&](point a, point b){
+                return a.distance < b.distance;
+            });
+            int index = 0;
+            for(int i = 0; i < distance_cnt; i++){
+                for(int j = 0; j < angle_add[i].size(); j++){
+                    tree->insert(tree->root, 0, distance_cnt - 1, angle_add[i][j].first);
+                    tree->del(tree->root, 0, distance_cnt - 1, angle_add[i][j].second + 1);
+                }
+                while(index < points.size() && points[index].distance_sort_id == i){
+                    points[index].cnt = tree->query(tree->root, 0, distance_cnt - 1, points[index].angle_sort_id, points[index].angle_sort_id);
+                    index++;
+                }
+            }
+        }
+        std::vector<pair<int,int> > get_obscured_points(){
+            std::vector<pair<int,int> > res;
+            for(int i = 0; i < points.size(); i++)if(points[i].cnt)res.push_back({points[index].x, points[index].y});
+            return res;
+        }
+        ~obscured_point_filter(){
+            delete tree;
+        }
+        
+}
 //dbscan 点
 struct dbscan_Point {
     float x, y, z;
@@ -339,6 +526,14 @@ int main(int argc, char **argv)
                     //阈值设置
                     grid.data[index] = std::max(0, int(grid_vector[i][j]));
                 }
+            }
+            obscured_point_filter opf(grid.info.width, grid.info.height, dbscan_data);
+            std::vector<std::pair<int,int> > obscured_points = opf.get_obscured_points();
+            for(int i = 0; i < obscured_points.size(); i++){
+                int x = obscured_points[i].first;
+                int y = obscured_points[i].second;
+                int index = y * grid.info.width + x;
+                if(grid.data[index]!=100)grid.data[index] = -1;
             }
             
             auto end_ = std::chrono::high_resolution_clock::now();
