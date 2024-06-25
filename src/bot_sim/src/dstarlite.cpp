@@ -43,7 +43,7 @@ class dstarlite{
         int from_real_y_to_map_y(double y){return (y - initial_y) / resolution;}
         double calculate_velocity(Nodeptr cur);
         double calculate_edge_value(Nodeptr cur);
-        dstarlite(std::string map_topic);
+        dstarlite(std::string map_topic, double x0, double k, double L, double x01, double k1, double L1);
         ~dstarlite();
         class Node{
             public:
@@ -201,7 +201,7 @@ class dstarlite{
         double velocity, resolution, initial_x, initial_y, d_manhattan_dis_to_start;
         double k, x0, L, k1, x01, L1;
 };
-dstarlite::dstarlite(std::string map_topic){
+dstarlite::dstarlite(std::string map_topic, double x0, double k, double L, double x01, double k1, double L1){
     ros::NodeHandle nh;
     nav_msgs::OccupancyGrid::ConstPtr msg = ros::topic::waitForMessage<nav_msgs::OccupancyGrid>(map_topic, nh);
     ROS_INFO("get_map_started");
@@ -213,13 +213,12 @@ dstarlite::dstarlite(std::string map_topic){
         initial_y = msg->info.origin.position.y;
         resolution = msg->info.resolution;
         for_dynamic_map_round = 0;
-        velocity = 1.0;
-        x0 = 75;
-        k = 0.25;
-        L = 5; 
-        x01 = 80;
-        k1 = -0.08;
-        L1 = velocity;
+        this->x0 = x0;
+        this->k = k;
+        this->L = L; 
+        this->x01 = x01;
+        this->k1 = k1;
+        this->L1 = L1;
         //needcode to initialize max_x and max_y;
         map = new Nodeptr*[max_x];
         std::queue<Nodeptr> q;
@@ -320,13 +319,13 @@ void dstarlite::when_receive_new_dynamic_map(nav_msgs::OccupancyGrid::ConstPtr d
             int x = from_real_x_to_map_x(map_vector.x());
             int y = from_real_y_to_map_y(map_vector.y());
             // ROS_INFO("dstar node: %lf %lf %d %d", map_vector.x(), map_vector.y(), x, y);
-            if(x < 0 || x >= max_x || y < 0 || y >= max_y)continue;
+            if(x < 0 || x >= max_x || y < 0 || y >= max_y || dynamic_map_msg->data[index] == -1)continue;
             changed_obstacle_nodes.erase(map[x][y]);
             map[x][y]->round_for_dynamic_map = for_dynamic_map_round;
             changed_obstacle_nodes.insert(map[x][y]);
             // if(dynamic_map_msg->data[index] != map[x][y]->obstacle_possibility && dynamic_map_msg->data[index] >= map[x][y]->static_obstacle_possibility){
             double new_obtacle_possibility_rate = 1.0/8;
-            map[x][y]->obstacle_possibility = new_obtacle_possibility_rate * std::max((double)dynamic_map_msg->data[index], map[x][y]->static_obstacle_possibility) + (1 - new_obtacle_possibility_rate) * map[x][y]->obstacle_possibility;
+            map[x][y]->obstacle_possibility = std::max((double)dynamic_map_msg->data[index], map[x][y]->static_obstacle_possibility);
             // ROS_INFO("map:[%d][%d]->obstacle_possibility=%lf",x,y ,map[x][y]->obstacle_possibility);
             dstar_update_node(map[x][y]);
             // }
@@ -334,7 +333,7 @@ void dstarlite::when_receive_new_dynamic_map(nav_msgs::OccupancyGrid::ConstPtr d
     }
     while(!changed_obstacle_nodes.empty()){
         Nodeptr cur = *changed_obstacle_nodes.begin();
-        if(cur->round_for_dynamic_map + 5 <= for_dynamic_map_round){
+        if(cur->round_for_dynamic_map + 60 <= for_dynamic_map_round){
             changed_obstacle_nodes.erase(cur);
             cur->obstacle_possibility = cur->static_obstacle_possibility;
             dstar_update_node(cur);
@@ -626,13 +625,37 @@ int main(int argc, char **argv){
     ros::Subscriber goal_sub = nh.subscribe(goal_topic_name, 1, record_goal_info);
     ROS_INFO("goal_topic_name: %s", goal_topic_name.c_str());
     
+    double x0_grid;
+    if (!nh.getParam(node_name+"/"+"x0_grid", x0_grid)) ROS_ERROR("Failed to get param 'x0_grid'");
+    ROS_INFO("x0_grid: %lf", x0_grid);
+
+    double k_grid;
+    if (!nh.getParam(node_name+"/"+"k_grid", k_grid)) ROS_ERROR("Failed to get param 'k_grid'");
+    ROS_INFO("k_grid: %lf", k_grid);
+
+    double L_grid;
+    if (!nh.getParam(node_name+"/"+"L_grid", L_grid)) ROS_ERROR("Failed to get param 'L_grid'");
+    ROS_INFO("L_grid: %lf", L_grid);
+
+    double x0_velocity;
+    if (!nh.getParam(node_name+"/"+"x0_velocity", x0_velocity)) ROS_ERROR("Failed to get param 'x0_velocity'");
+    ROS_INFO("x0_velocity: %lf", x0_velocity);
+
+    double k_velocity;
+    if (!nh.getParam(node_name+"/"+"k_velocity", k_velocity)) ROS_ERROR("Failed to get param 'k_velocity'");
+    ROS_INFO("k_velocity: %lf", k_velocity);
+
+    double L_velocity;
+    if (!nh.getParam(node_name+"/"+"L_velocity", L_velocity)) ROS_ERROR("Failed to get param 'L_velocity'");
+    ROS_INFO("L_velocity: %lf", L_velocity);
+
     ros::Publisher pub = nh.advertise<nav_msgs::Path>("dstar_path", 1);
     ros::Publisher pub2 = nh.advertise<nav_msgs::OccupancyGrid>("all_map_status", 1);
     ros::Publisher pub3 = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
     pub_map = &pub2;
 
     ROS_INFO("Initialization started");
-    dstarlite dstar(static_map_topic_name);
+    dstarlite dstar(static_map_topic_name, x0_grid, k_grid, L_grid, x0_velocity, k_velocity, L_velocity);
     ROS_INFO("Initialization finished");
     bool have_first_goal = false;
     ros::Rate rate(30);

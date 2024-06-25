@@ -43,17 +43,17 @@ void scanCallback_right(const livox_ros_driver2::CustomMsg &scan)
 double max_dis=0;
 std::vector<double> distances;
 
+bool filter(double x, double y, double z){
+    double dx = x + 0.13388;
+    double dy = y + 0.11369;
+    return dx*dx + dy*dy >= 0.35 * 0.35;
+}
 int main(int argc, char **argv)
 {
-    std::string node_name = "threeD_lidar_merge";
+    std::string node_name = "threeD_lidar_merge_pointcloud";
     ros::init(argc, argv, node_name);
     ros::NodeHandle nh;
 
-    if (!nh.getParam("/" + node_name + "/base_frame", base_frame))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'base_frame'");
-        return -1;
-    }
     if (!nh.getParam("/" + node_name + "/laser_frame", laser_frame))
     {
         ROS_ERROR("Failed to retrieve parameter 'laser_frame'");
@@ -77,8 +77,9 @@ int main(int argc, char **argv)
 
     ros::Subscriber sub_left = nh.subscribe(scan_topic_left, 1, scanCallback_left);
     ros::Subscriber sub_right = nh.subscribe(scan_topic_right, 1, scanCallback_right);
-    pub = nh.advertise<livox_ros_driver2::CustomMsg>(new_scan_topic, 1);
+    pub = nh.advertise<sensor_msgs::PointCloud2>(new_scan_topic, 1);
     ros::Rate rate(50.0);
+    pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
     while (ros::ok())
     {
         if (!get_msg)
@@ -89,24 +90,30 @@ int main(int argc, char **argv)
         auto scan_new = scan_copy_right;
         auto scan_record_left = scan_copy_left;
         auto scan_record_right = scan_copy_right;
-        scan_new.points.clear();
+        pcl_cloud.points.clear();
         for (int i = 0; i < scan_record_left.points.size(); i++){
-            scan_new.points.push_back(scan_record_left.points[i]);
-            scan_new.points[scan_new.points.size()-1].x -= 0.011;
-            scan_new.points[scan_new.points.size()-1].y -= 0.02329;
-            scan_new.points[scan_new.points.size()-1].z += 0.04412;
+            if(!filter(scan_record_left.points[i].x, scan_record_left.points[i].y, scan_record_left.points[i].z))continue;
+            double x = scan_record_left.points[i].x - 0.011;
+            double y = -scan_record_left.points[i].y + 0.02329;
+            double z = -scan_record_left.points[i].z - 0.04412;
+            pcl_cloud.points.push_back(pcl::PointXYZ(x, y, z));
         }
         for (int i = 0; i < scan_record_right.points.size(); i++){
-            scan_new.points.push_back(scan_record_right.points[i]);
-            scan_new.points[scan_new.points.size()-1].x -= 0.011;
-            scan_new.points[scan_new.points.size()-1].y -= 0.02329;
-            scan_new.points[scan_new.points.size()-1].z += 0.04412;
+            if(!filter(scan_record_right.points[i].x, scan_record_right.points[i].y, scan_record_right.points[i].z))continue;
+            double x = scan_record_right.points[i].x - 0.011;
+            double y = -scan_record_right.points[i].y + 0.02329;
+            double z = -scan_record_right.points[i].z - 0.04412;
+            pcl_cloud.points.push_back(pcl::PointXYZ(x, y, z));
         }
         // for(int i=(int)distances.size()-1;i>=0;i--)printf("%lf ",distances[i]);
         // printf("\nmax_dis: %f\n----------------------\n",max_dis);
-        scan_new.header.stamp = ros::Time::now();
-        scan_new.point_num = scan_new.points.size();
-        pub.publish(scan_new);
+        sensor_msgs::PointCloud2 output;
+        pcl::toROSMsg(pcl_cloud, output);
+        output.header.frame_id = laser_frame; // replace with your frame id
+        output.header.stamp = ros::Time::now();
+        pub.publish(output);
+        // ---
+        // printf("Published new scan\n");
         get_msg = 0;
         rate.sleep();
     }

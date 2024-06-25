@@ -6,8 +6,7 @@
       <param name="min_angle" type="double" value="-1.2" />
       <param name="max_angle" type="double" value="1.2" />
   </node> -->
-  <node pkg="bot_sim" type="threeD_lidar_merge" name="threeD_lidar_merge" output="screen">
-      <param name="base_frame" type="string" value="aft_mapped" />
+  <node pkg="bot_sim" type="threeD_lidar_merge_pointcloud" name="threeD_lidar_merge_pointcloud" output="screen">
       <param name="laser_frame" type="string" value="aft_mapped" />
       <param name="scan_topic_left" type="string" value="/livox/lidar_192_168_1_3" />
       <param name="scan_topic_right" type="string" value="/livox/lidar_192_168_1_141" />

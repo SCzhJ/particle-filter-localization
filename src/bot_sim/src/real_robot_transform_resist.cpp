@@ -4,41 +4,70 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2_ros/transform_listener.h>
 const float PI = 3.14159265358979323846;
 
 std::string v_frame;
 std::string g_frame;
 std::string odom_frame;
-tf2::Quaternion qhdl;
+tf2::Quaternion qpl;
 bool received_msg = 0;
-tf2_ros::Buffer tfBuffer;
-
-void listenTransform()
+void odometryCallback(const nav_msgs::Odometry::ConstPtr& msg)
 {
+    received_msg = 1;
+    // Create a TransformStamped object
     geometry_msgs::TransformStamped transformStamped;
 
-    try {
-        transformStamped = tfBuffer.lookupTransform("aft_mapped", "map", ros::Time(0), ros::Duration(3.0));
-        tf2::Quaternion q(
-            transformStamped.transform.rotation.x,
-            transformStamped.transform.rotation.y,
-            transformStamped.transform.rotation.z,
-            transformStamped.transform.rotation.w
-        );
-        qhdl = q;
-        tf2::Matrix3x3 m(qhdl);
-        double roll, pitch, yaw;
-        m.getRPY(roll, pitch, yaw);
-        qhdl.setRPY(roll, pitch, 0);
-        qhdl = qhdl.inverse();
-        ROS_INFO("Quaternion_hdl: x=%f, y=%f, z=%f, w=%f", qhdl.x(), qhdl.y(), qhdl.z(), qhdl.w());
-        received_msg = 1;
-    } catch (tf2::TransformException &ex) {
-        ROS_WARN("%s", ex.what());
-    }
-}
+    // Set the header information
+    transformStamped.header.stamp = ros::Time::now();
+    transformStamped.header.frame_id = g_frame;
+    transformStamped.child_frame_id = v_frame;
 
+    // Set the translation to zero
+    transformStamped.transform.translation.x = 0.0;
+    transformStamped.transform.translation.y = 0.0;
+    transformStamped.transform.translation.z = 0.0;
+    tf2::Quaternion q(
+        msg->pose.pose.orientation.x,
+        msg->pose.pose.orientation.y,
+        msg->pose.pose.orientation.z,
+        msg->pose.pose.orientation.w
+    );
+    // q = q.inverse();
+    // 3d
+    qpl = q;
+
+    //
+    // // 将四元数旋转应用到一个初始向量
+    // tf2::Vector3 initial_vector(1, 0, 0);
+    // tf2::Vector3 rotated_vector = tf2::quatRotate(qpl, initial_vector);
+
+    // // 计算旋转后的向量在XY平面上的投影
+    // tf2::Vector3 projected_vector(rotated_vector.x(), rotated_vector.y(), 0);
+
+    // // 计算这个投影向量和初始向量之间的旋转
+    // tf2::Quaternion q_correction;
+    // q_correction.setRPY(0, 0, -atan2(projected_vector.y(), projected_vector.x()));
+
+    // // 将这个旋转应用到原始的四元数旋转
+    // qpl = qpl * q_correction;
+    tf2::Matrix3x3 m(qpl);
+    double roll, pitch, yaw;
+    m.getRPY(roll, pitch, yaw);
+    qpl.setRPY(roll, pitch, 0);
+    qpl = qpl.inverse();
+    // Set the rotation from the odometry message
+    // transformStamped.transform.rotation = msg->pose.pose.orientation;
+    transformStamped.transform.rotation.x = q.x();
+    transformStamped.transform.rotation.y = q.y();
+    transformStamped.transform.rotation.z = q.z();
+    transformStamped.transform.rotation.w = q.w();
+
+    // Create a TransformBroadcaster object
+    tf2_ros::TransformBroadcaster tfb;
+
+    // Broadcast the transform
+    tfb.sendTransform(transformStamped);
+}
 
 int main(int argc, char** argv){
     std::string node_name = "real_robot_transform";
@@ -75,9 +104,7 @@ int main(int argc, char** argv){
 
     tf2_ros::TransformBroadcaster broadcaster;
 
-    tf2_ros::TransformListener tfListener(tfBuffer);
-
-    // ros::Subscriber sub = nh.subscribe("/aft_mapped_to_init", 1000, odometryCallback);
+    ros::Subscriber sub = nh.subscribe("/aft_mapped_to_init", 1000, odometryCallback);
 
     geometry_msgs::TransformStamped transformStamped1;
     transformStamped1.header.frame_id = _3DLidar_frame;
@@ -92,10 +119,9 @@ int main(int argc, char** argv){
 
     ros::Rate rate(20.0);
     while (nh.ok()){
-        listenTransform();
         if(received_msg){
             transformStamped1.header.stamp = ros::Time::now();
-            auto q =  qhdl  * qz ;
+            auto q =  qpl  * qz ;
             transformStamped1.transform.rotation.x = q.x();
             transformStamped1.transform.rotation.y = q.y();
             transformStamped1.transform.rotation.z = q.z();

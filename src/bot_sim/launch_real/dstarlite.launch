@@ -7,6 +7,16 @@
         <param name="robot_frame_name" value="virtual_frame" />
         <param name="dynamic_map_topic_name" value="/grid" />
         <param name="goal_topic_name" value="/clicked_point" />
+        
+        <!-- Params for edge cost -->
+        <param name="x0_grid" type="double" value="75" />
+        <param name="k_grid" type="double" value="0.25" />
+        <param name="L_grid" type="double" value="5" />
+        
+        <!-- Params for velocity cost -->
+        <param name="x0_velocity" type="double" value="150" />
+        <param name="k_velocity" type="double" value="-0.08" />
+        <param name="L_velocity" type="double" value="1.5" />
     </node>
 
 </launch>

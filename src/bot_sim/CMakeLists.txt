@@ -157,6 +157,7 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(scan_2_node src/scan_2_node.cpp)
+add_executable(imu_filter src/imu_filter.cpp)
 add_executable(real_robot_transform src/real_robot_transform.cpp)
 add_executable(real_robot_transform_3d src/real_robot_transform_3d.cpp include/bot_sim/EKF.h)
 add_executable(cmd2ser src/cmd2ser.cpp)
@@ -166,6 +167,7 @@ add_executable(test_transform src/test_transform.cpp)
 add_executable(lidar_filter src/lidar_filter.cpp)
 add_executable(threeD_lidar_filter src/threeD_lidar_filter.cpp)
 add_executable(threeD_lidar_merge src/threeD_lidar_merge.cpp)
+add_executable(threeD_lidar_merge_pointcloud src/threeD_lidar_merge_pointcloud.cpp)
 add_executable(dbscan_bfs src/dbscan_bfs.cpp)
 add_executable(dbscan_bfs_3D src/dbscan_bfs_3D.cpp)
 add_executable(threeD_lidar_test src/threeD_lidar_test.cpp)
@@ -183,6 +185,9 @@ add_executable(likelihood_field src/likelihood_field.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(scan_2_node
+${catkin_LIBRARIES}
+)
+target_link_libraries(imu_filter
   ${catkin_LIBRARIES}
 )
 target_link_libraries(real_robot_transform
@@ -212,6 +217,9 @@ target_link_libraries(threeD_lidar_filter
   ${catkin_LIBRARIES}
 )
 target_link_libraries(threeD_lidar_merge
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(threeD_lidar_merge_pointcloud
   ${catkin_LIBRARIES}
 )
 target_link_libraries(dbscan_bfs
