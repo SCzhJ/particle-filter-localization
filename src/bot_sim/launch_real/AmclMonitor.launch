@@ -1,7 +1,0 @@
-<launch>
-  <!-- Not Right Yet !!! -->
-  <!-- Do Not Uncomment -->
-  <!-- <node pkg="bot_sim" type="AmclMonitor.py" name="amcl_monitor" output="screen" >
-  </node> -->
-
-</launch>

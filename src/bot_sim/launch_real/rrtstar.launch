@@ -1,5 +1,0 @@
-<launch>
-  <node pkg="bot_sim" type="RRT_star_srv.py" name="RRT_star_srv">
-    <param name="map_name" type="string" value="RMUL" />
-  </node>
-</launch>
