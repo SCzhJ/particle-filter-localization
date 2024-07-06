@@ -1,0 +1,9 @@
+# Request
+float32 curr_x
+float32 curr_y
+float32 goal_x
+float32 goal_y
+---
+# Response
+int32 success
+geometry_msgs/Point[] path

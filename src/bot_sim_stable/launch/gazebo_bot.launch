@@ -1,0 +1,31 @@
+<launch>
+    <include file="$(find gazebo_ros)/launch/empty_world.launch" >
+        <arg name="world_name" value="$(find bot_sim_stable)/worlds/ManyObstacles.world" />
+    </include>
+	<param name="robot_description" command="$(find xacro)/xacro '$(find bot_sim_stable)/robots/omni_robot.urdf.xacro'" />
+	<arg name="x" default="0.0" />
+	<arg name="y" default="0.0" />
+	<arg name="z" default="0.17" />
+	<param name="rate" value="10" />
+	<rosparam file="$(find bot_sim_stable)/config/joint_velocity.yaml" command="load"/>
+	<rosparam file="$(find bot_sim_stable)/config/joint_velocity_controller.yaml" command="load"/> 
+    <!-- Nodes -->
+	<node name="omni_robot_node" pkg="bot_sim_stable" type="controller.py" output="screen"/>
+	<!-- <node name="plain_controller" pkg="bot_sim_stable" type="plain_controller.py" output="screen"/> -->
+	<node name="odom_pub" pkg="bot_sim_stable" type="odom_pub.py" />
+	<!-- <node name="plain_pub" pkg="bot_sim_stable" type="plain2base_link.py" output="screen"/>
+	<node name="lrf_pub" pkg="bot_sim_stable" type="plain2base_link.py" output="screen"/> -->
+
+	<!-- <node name="scan_trans" pkg="omni_robot_description" type="scan_dealer.py" /> -->
+    <node name="urdf_spawner" pkg="gazebo_ros" type="spawn_model" output="screen" args="-urdf -x $(arg x) -y $(arg y) -z $(arg z) -model omni_robot -param robot_description"/>
+	<!-- <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" output="screen" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" /> -->
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="/omni_robot" 
+	args="--namespace=/omni_robot
+	joint_state_controller
+	fourth_wheel_joint
+	third_wheel_joint
+	second_wheel_joint
+	first_wheel_joint
+	"/>
+</launch>

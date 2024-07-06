@@ -1,0 +1,29 @@
+<launch>
+
+  <arg name="map" default="ManyObstaclesMap.yaml" />
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find bot_sim)/map/$(arg map)"/>
+
+  <node pkg="bot_sim" type="nav_ctrl.py" name="nav_ctrl" output="screen" >
+    <param name="world_frame" value="map"/>
+    <param name="robot_frame" value="base_footprint"/>
+    <param name="cost_map_path" value="/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/scripts/DWA/CostMap/CostMapA2d5B1d8" />
+    <param name="dyn_map_name" value="/grid"/>
+  </node>
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find bot_sim)/config/rviz/gazebo_laserbot.rviz" />
+
+  <node pkg="bot_sim" type="RRT_star_srv.py" name="RRT_star_srv" >
+    <param name="map_name" type="string" value="CostMapA2d5B1d8" />
+  </node>
+
+  <!-- <node pkg="bot_sim" type="wavefront" name="wavefront" output="screen">
+      <param name="base_frame" type="string" value="base_footprint" />
+      <param name="laser_frame" type="string" value="laser_lrf_link" />
+      <param name="scan_topic" type="string" value="scan_laser" />
+      <param name="map_topic" type="string" value="cost_map" />
+      <param name="map_width" type="int" value="100" />
+      <param name="map_height" type="int" value="100" />
+      <param name="obs_threshold" type="int" value="10" />
+      <param name="delta_time" type="double" value="0.05" />
+  </node> -->
+
+</launch>

@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  
+  <xacro:macro name="plain_gazebo_v0" params="prefix">
+	<gazebo reference="${prefix}_plain_link">
+	  <selfCollide>false</selfCollide>
+    </gazebo>
+  </xacro:macro>
+</robot>

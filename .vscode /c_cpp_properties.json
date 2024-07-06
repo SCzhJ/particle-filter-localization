@@ -1,0 +1,26 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/sentry_train_test/AstarTraining/sim_nav/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/sentry_train_test/AstarTraining/ws_livox/devel/include/**",
+        "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/include/**",
+        "/home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim_stable/include/**",
+        "/home/sentry_train_test/AstarTraining/sim_nav/src/Point-LIO/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "clang-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

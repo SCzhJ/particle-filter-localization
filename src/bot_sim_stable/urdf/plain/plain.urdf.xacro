@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find bot_sim_stable)/urdf/plain/plain.gazebo.xacro"/>
+  <!-- <xacro:include filename="$(find bot_sim_stable)/urdf/plain/plain.transmission.xacro"/> -->
+
+  <xacro:macro name="plain_v0" params="prefix parent *joint_origin *joint_axis">	
+  <link name="${prefix}_plain_link">
+    <inertial>
+      <mass value="0.1"/> <!-- 质量 -->
+      <inertia ixx="0.00208333" ixy="0" ixz="0" iyy="0.0208333" iyz="0" izz="0.00834722"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <box size="0.1 0.1 0.02"/> <!-- 设置小 -->
+      </geometry>
+      <material name="blue"> <!-- 设置方块的颜色 -->
+        <color rgba="0 0 1 1"/> <!-- RGBA颜色，这里是蓝色 -->
+      </material>
+    </visual>
+    <!-- 其他元素，如collision等 -->
+  </link>
+	<!-- <joint name="${prefix}_plain_joint" type="fixed">
+	  <xacro:insert_block name="joint_origin"/>
+	  <parent link="${parent}"/>
+	  <child link="${prefix}_plain_link"/>
+	</joint>	 -->
+  
+	<joint name="${prefix}_plain_joint" type="fixed">
+	  <xacro:insert_block name="joint_origin"/>
+	  <parent link="${parent}"/>
+	  <child link="${prefix}_plain_link"/>
+	</joint>
+  </xacro:macro>
+
+</robot>
