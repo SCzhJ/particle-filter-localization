@@ -1,0 +1,11 @@
+patrol_path: [[-4.65, 4.65], [-2.2, 0.5], [-0.1, -1.2], [0.8, 0.7]]
+control_location: [1., -0.6]
+base_location: [-2.2, 0.5]
+supplies_location: [-4.65, 4.65]
+central_point_location: [0.8, 0.7]
+mode: 1
+hp_before_returning: 0
+hp_before_retreat: 410
+hp_before_healing: 410
+restore_to_hp: 570
+max_nav_succeed_time: 25.

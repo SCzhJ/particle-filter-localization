@@ -43,7 +43,7 @@ class dstarlite{
         int from_real_y_to_map_y(double y){return (y - initial_y) / resolution;}
         double calculate_velocity(Nodeptr cur);
         double calculate_edge_value(Nodeptr cur);
-        dstarlite(std::string map_topic, double x0, double k, double L, double x01, double k1, double L1);
+        dstarlite(std::string map_topic, double x0, double k, double L, double x01, double k1, double L1, double start_decrease_dis, double min_velocity_rate);
         ~dstarlite();
         class Node{
             public:
@@ -200,8 +200,9 @@ class dstarlite{
         ros::Rate* rate_for_straight_line, *rate_for_diagonal_line;
         double velocity, resolution, initial_x, initial_y, d_manhattan_dis_to_start;
         double k, x0, L, k1, x01, L1;
+        double start_decrease_dis, min_velocity_rate;
 };
-dstarlite::dstarlite(std::string map_topic, double x0, double k, double L, double x01, double k1, double L1){
+dstarlite::dstarlite(std::string map_topic, double x0, double k, double L, double x01, double k1, double L1, double start_decrease_dis, double min_velocity_rate){
     ros::NodeHandle nh;
     nav_msgs::OccupancyGrid::ConstPtr msg = ros::topic::waitForMessage<nav_msgs::OccupancyGrid>(map_topic, nh);
     ROS_INFO("get_map_started");
@@ -219,6 +220,8 @@ dstarlite::dstarlite(std::string map_topic, double x0, double k, double L, doubl
         this->x01 = x01;
         this->k1 = k1;
         this->L1 = L1;
+        this->start_decrease_dis = start_decrease_dis;
+        this->min_velocity_rate = min_velocity_rate;
         //needcode to initialize max_x and max_y;
         map = new Nodeptr*[max_x];
         std::queue<Nodeptr> q;
@@ -586,7 +589,9 @@ void dstarlite::try_to_find_path(){
     return;
 }
 double dstarlite::calculate_velocity(Nodeptr cur){
-    return L1/(1 + exp(-k1 * (cur->obstacle_possibility - x01)));
+    double velocity = L1/(1 + exp(-k1 * (cur->obstacle_possibility - x01)));
+    if(sqrt((cur->x - final_goal_node->x) * (cur->x - final_goal_node->x) + (cur->y - final_goal_node->y) * (cur->y - final_goal_node->y))*resolution < start_decrease_dis)velocity*=min_velocity_rate+(1-min_velocity_rate)/start_decrease_dis*sqrt((cur->x - final_goal_node->x) * (cur->x - final_goal_node->x) + (cur->y - final_goal_node->y) * (cur->y - final_goal_node->y))*resolution;
+    return velocity;
 }
 double dstarlite::calculate_edge_value(Nodeptr cur){
     return 1 + L/(1 + exp(-k * (cur->obstacle_possibility - x0)));
@@ -649,13 +654,21 @@ int main(int argc, char **argv){
     if (!nh.getParam(node_name+"/"+"L_velocity", L_velocity)) ROS_ERROR("Failed to get param 'L_velocity'");
     ROS_INFO("L_velocity: %lf", L_velocity);
 
+    double start_decrease_dis;
+    if (!nh.getParam(node_name+"/"+"start_decrease_dis", start_decrease_dis)) ROS_ERROR("Failed to get param 'start_decrease_dis'");
+    ROS_INFO("start_decrease_dis: %lf", start_decrease_dis);
+
+    double min_velocity_rate;
+    if (!nh.getParam(node_name+"/"+"min_velocity_rate", min_velocity_rate)) ROS_ERROR("Failed to get param 'min_velocity_rate'");
+    ROS_INFO("min_velocity_rate: %lf", min_velocity_rate);
+
     ros::Publisher pub = nh.advertise<nav_msgs::Path>("dstar_path", 1);
     ros::Publisher pub2 = nh.advertise<nav_msgs::OccupancyGrid>("all_map_status", 1);
     ros::Publisher pub3 = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
     pub_map = &pub2;
 
     ROS_INFO("Initialization started");
-    dstarlite dstar(static_map_topic_name, x0_grid, k_grid, L_grid, x0_velocity, k_velocity, L_velocity);
+    dstarlite dstar(static_map_topic_name, x0_grid, k_grid, L_grid, x0_velocity, k_velocity, L_velocity, start_decrease_dis, min_velocity_rate);
     ROS_INFO("Initialization finished");
     bool have_first_goal = false;
     ros::Rate rate(30);

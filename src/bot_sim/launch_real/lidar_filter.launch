@@ -12,8 +12,8 @@
       <param name="scan_topic_left" type="string" value="/livox/lidar_192_168_1_3" />
       <param name="scan_topic_right" type="string" value="/livox/lidar_192_168_1_141" />
       <param name="new_scan_topic" type="string" value="/3Dlidar" />
-      <param name="first_RADIUS" type="double" value="0.24" />
-      <param name="second_RADIUS" type="double" value="0.3" />
+      <param name="first_RADIUS" type="double" value="0.35" />
+      <param name="second_RADIUS" type="double" value="0.35" />
       <param name="start_height" type="double" value="0.1" />
       <param name="max_height" type="double" value="0.3" />
       <param name="slope_1" type="double" value="0.5" />

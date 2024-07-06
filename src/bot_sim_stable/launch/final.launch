@@ -1,0 +1,7 @@
+<launch>
+    <include file="$(find bot_sim_stable)/launch/gazebo_bot.launch" />
+    <!-- <node name="wait" pkg="bot_sim_stable" type="wait.py" args="20" /> -->
+    <!-- <include file="$(find bot_sim_stable)/launch/slim.launch" /> -->
+    <!-- <include file="$(find bot_sim_stable)/launch/read_map.launch" /> -->
+    <include file="$(find bot_sim_stable)/launch/gazebo_bot_rviz.launch" />
+</launch>

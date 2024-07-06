@@ -193,30 +193,30 @@ int main(int argc, char **argv)
         tf2::fromMsg(transformStamped.transform, tf_transform);
         for (int i = 0; i < scan_record_left.points.size(); i++)
         {
-            double x = scan_record_left.points[i].x;
-            double y = scan_record_left.points[i].y;
-            double z = scan_record_left.points[i].z;
+            double x = scan_record_left.points[i].x - 0.011;
+            double y = -scan_record_left.points[i].y - 0.02329;
+            double z = -scan_record_left.points[i].z + 0.04412;
             tf2::Vector3 point_in(x, y, z);
             tf2::Vector3 point_out = tf_transform * point_in;
             double nx = point_out.x();
             double ny = point_out.y();
             double nz = point_out.z();
-            if (satisfied(nx,ny,z))
+            if (satisfied(nx,ny,-z))
             {
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
             }
         }
         for (int i = 0; i < scan_record_right.points.size(); i++)
         {
-            double x = scan_record_right.points[i].x;
-            double y = scan_record_right.points[i].y;
-            double z = scan_record_right.points[i].z;
+            double x = scan_record_right.points[i].x - 0.011;
+            double y = -scan_record_right.points[i].y - 0.02329;
+            double z = -scan_record_right.points[i].z + 0.04412;
             tf2::Vector3 point_in(x, y, z);
             tf2::Vector3 point_out = tf_transform * point_in;
             double nx = point_out.x();
             double ny = point_out.y();
             double nz = point_out.z();
-            if (satisfied(nx,ny,z))
+            if (satisfied(nx,ny,-z))
             {
                 pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
             }

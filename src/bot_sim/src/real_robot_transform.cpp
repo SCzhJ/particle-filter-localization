@@ -82,9 +82,9 @@ int main(int argc, char** argv){
     geometry_msgs::TransformStamped transformStamped1;
     transformStamped1.header.frame_id = _3DLidar_frame;
     transformStamped1.child_frame_id = gimbal_frame;
-    transformStamped1.transform.translation.x = -0.13388;
-    transformStamped1.transform.translation.y = -0.11369;
-    transformStamped1.transform.translation.z = 0.35;
+    transformStamped1.transform.translation.x = -0.011;
+    transformStamped1.transform.translation.y = 0.19495+0.02329;
+    transformStamped1.transform.translation.z = 0;
     tf2::Quaternion qx;
     qx.setRPY(PI, 0, 0);
     tf2::Quaternion qz;
@@ -95,7 +95,7 @@ int main(int argc, char** argv){
         listenTransform();
         if(received_msg){
             transformStamped1.header.stamp = ros::Time::now();
-            auto q =  qhdl  * qz ;
+            auto q =  qhdl;
             transformStamped1.transform.rotation.x = q.x();
             transformStamped1.transform.rotation.y = q.y();
             transformStamped1.transform.rotation.z = q.z();

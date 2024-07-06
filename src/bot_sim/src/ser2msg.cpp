@@ -13,8 +13,8 @@
 const double PI = 3.14159265358979323846;
 
 serial::Serial ser;
-const int write_length = 13;
-const int read_length = 11;
+const int write_length = 11;
+const int read_length = 19;
 
 geometry_msgs::TransformStamped transformRotbaseToVirtual;
 geometry_msgs::TransformStamped transformGimbalToRotbase;
@@ -27,6 +27,13 @@ union FloatToByte{
     uint8_t bytes[sizeof(float)];
 };
 
+union ByteToByte{
+    uint8_t f;
+    uint8_t bytes[sizeof(float)];
+};
+
+
+
 class Message {
 public:
     static const uint8_t SOF = 0xFF;
@@ -36,8 +43,9 @@ public:
     // float past_imu_angle;
     // float past_relative_angle;
     float imu_angle;
-    float relative_angle;
+    float relative_angle, goal_x, goal_y;
     int goal_type;
+    bool receive_message = 0;
     bool readFromBuffer(std::vector<uint8_t>& buffer) {
         if (buffer.size() < read_length) {
             // ROS_INFO("Not enough data available from the serial port, current buffer size: %d", buffer.size());
@@ -50,6 +58,8 @@ public:
             memcpy(&temp, &buffer[9], sizeof(char));
             // ROS_INFO("goal_type: %d", (int)temp);
             this->goal_type = (int)temp;
+            memcpy(&this->goal_x, &buffer[10], sizeof(float));
+            memcpy(&this->goal_y, &buffer[14], sizeof(float));
             buffer.erase(buffer.begin(), buffer.begin()+read_length);
             // ROS_INFO("Read from buffer");
             return true;
@@ -221,11 +231,15 @@ int main(int argc, char** argv)
         FloatToByte linear_y;
         linear_y.f = cmd_vel.linear.y;
         std::copy(std::begin(linear_y.bytes),std::end(linear_y.bytes),&buffer_send[5]);
-        // Angular velocity
-        FloatToByte angular_z;
-        angular_z.f = cmd_vel.angular.z;
-        std::copy(std::begin(angular_z.bytes),std::end(angular_z.bytes),&buffer_send[9]);
-
+        //received message
+        ByteToByte received_message;
+        received_message.f = message.receive_message;
+        std::copy(std::begin(received_message.bytes),std::end(received_message.bytes),&buffer_send[9]);
+        message.receive_message = 0;
+        //whether arrived
+        ByteToByte arrived;//0 move, 1 arrive
+        arrived.f = 0;
+        std::copy(std::begin(arrived.bytes),std::end(arrived.bytes),&buffer_send[10]);
         // Write to the serial port
         size_t bytes_written = ser.write(buffer_send,write_length);
         if (bytes_written < write_length){
@@ -272,6 +286,7 @@ int main(int argc, char** argv)
         clicked_point.point.z=0;
         // clicked_point_pub.publish(clicked_point);
         // ROS_INFO("%d",message.goal_type);
+        // ROS_INFO("%f %f", message.goal_x, message.goal_y);
         ros::spinOnce();
         rate.sleep();
     }

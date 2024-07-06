@@ -174,7 +174,6 @@ add_executable(threeD_lidar_test src/threeD_lidar_test.cpp)
 add_executable(ser2msg_write_only src/ser2msg_write_only.cpp)
 add_executable(transform_listener src/transform_listener.cpp)
 add_executable(dstarlite src/dstarlite.cpp)
-add_executable(likelihood_field src/likelihood_field.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -238,9 +237,6 @@ target_link_libraries(transform_listener
   ${catkin_LIBRARIES}
 )
 target_link_libraries(dstarlite
-  ${catkin_LIBRARIES}
-)
-target_link_libraries(likelihood_field
   ${catkin_LIBRARIES}
 )
 ## Add cmake target dependencies of the executable

@@ -1,0 +1,4 @@
+patrol_path: [[2.6, -3.6], [0.3, -3.5], [-0.5, 2.6]]
+base_location: [-2.2, 0.5]
+supplies_location: [3., 1.]
+hp_before_returning: 300
