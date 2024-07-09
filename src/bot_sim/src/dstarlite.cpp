@@ -493,7 +493,7 @@ void dstarlite::publish(ros::Publisher& pub, std::string map_frame_name, ros::Pu
         tf2::fromMsg(transformStamped.transform, tf_transform);
         tf2::Vector3 new_cmd_vel = tf_transform * old_cmd_vel;
         cmd_vel.linear.x = new_cmd_vel.x();
-        cmd_vel.linear.y = -new_cmd_vel.y();
+        cmd_vel.linear.y = new_cmd_vel.y();
         cmd_vel_pub.publish(cmd_vel);
     }
     else{
@@ -719,6 +719,12 @@ int main(int argc, char **argv){
             }
             dstar.dstar_main(dynamic_map_msg, transformStamped.transform.translation.x, transformStamped.transform.translation.y, map_frame_name, tfBuffer);
             dstar.publish(pub, map_frame_name, pub3, robot_frame_name, tfBuffer);
+        }
+        else{
+            geometry_msgs::Twist cmd_vel;
+            cmd_vel.linear.x = 0;
+            cmd_vel.linear.y = 0;
+            pub3.publish(cmd_vel);
         }
         ros::spinOnce();
         rate.sleep();

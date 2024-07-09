@@ -229,7 +229,7 @@ int main(int argc, char** argv)
         std::copy(std::begin(linear_x.bytes),std::end(linear_x.bytes),&buffer_send[1]);
         // Linear velocities y
         FloatToByte linear_y;
-        linear_y.f = cmd_vel.linear.y;
+        linear_y.f = -cmd_vel.linear.y;
         std::copy(std::begin(linear_y.bytes),std::end(linear_y.bytes),&buffer_send[5]);
         //received message
         ByteToByte received_message;
@@ -286,7 +286,7 @@ int main(int argc, char** argv)
         clicked_point.point.z=0;
         // clicked_point_pub.publish(clicked_point);
         // ROS_INFO("%d",message.goal_type);
-        // ROS_INFO("%f %f", message.goal_x, message.goal_y);
+        ROS_INFO("%f %f", message.relative_angle, message.imu_angle);
         ros::spinOnce();
         rate.sleep();
     }
