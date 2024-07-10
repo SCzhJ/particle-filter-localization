@@ -5,6 +5,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Path.h>
+#include <std_msgs/Bool.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2/LinearMath/Transform.h>
@@ -285,7 +286,8 @@ void dstarlite::when_receive_new_goal(geometry_msgs::PointStamped::ConstPtr goal
     reset();
     dstar_list.clear();
     changed_obstacle_nodes.clear();
-    for(int i = 0; i < max_x; i++)for(int j = 0; j < max_y; j++)map[i][j]->manhattan_dis_to_start = abs(i - start_x) + abs(j - start_y);
+    ROS_INFO("clear finished");
+    // for(int i = 0; i < max_x; i++)for(int j = 0; j < max_y; j++)map[i][j]->manhattan_dis_to_start = abs(i - start_x) + abs(j - start_y);
     // map[goal_x][goal_y]->dis_to_goal = 0;
     map[goal_x][goal_y]->rhs = 0;
     dstar_list.insert(map[goal_x][goal_y]);
@@ -327,7 +329,6 @@ void dstarlite::when_receive_new_dynamic_map(nav_msgs::OccupancyGrid::ConstPtr d
             map[x][y]->round_for_dynamic_map = for_dynamic_map_round;
             changed_obstacle_nodes.insert(map[x][y]);
             // if(dynamic_map_msg->data[index] != map[x][y]->obstacle_possibility && dynamic_map_msg->data[index] >= map[x][y]->static_obstacle_possibility){
-            double new_obtacle_possibility_rate = 1.0/8;
             map[x][y]->obstacle_possibility = std::max((double)dynamic_map_msg->data[index], map[x][y]->static_obstacle_possibility);
             // ROS_INFO("map:[%d][%d]->obstacle_possibility=%lf",x,y ,map[x][y]->obstacle_possibility);
             dstar_update_node(map[x][y]);
@@ -475,7 +476,7 @@ void dstarlite::publish(ros::Publisher& pub, std::string map_frame_name, ros::Pu
     if(lct->find_root(cur) == lct->find_root(final_goal_node)){
         // ROS_INFO("cur->succ:%p cur:%p root(cur)%p goal%p root(goal)%p", cur->succ, cur, lct->find_root(cur), final_goal_node, lct->find_root(final_goal_node));
         Nodeptr final_aim = cur;
-        for(int i = 0; i < 8; i++){
+        for(int i = 0; i < 12; i++){
             if(final_aim->succ == nullptr)break;
             final_aim = final_aim->succ;
         }
@@ -494,6 +495,7 @@ void dstarlite::publish(ros::Publisher& pub, std::string map_frame_name, ros::Pu
         tf2::Vector3 new_cmd_vel = tf_transform * old_cmd_vel;
         cmd_vel.linear.x = new_cmd_vel.x();
         cmd_vel.linear.y = new_cmd_vel.y();
+        ROS_INFO("old_cmd_vel: %lf %lf new_cmd_vel: %lf %lf", old_cmd_vel.x(), old_cmd_vel.y(), new_cmd_vel.x(), new_cmd_vel.y());
         cmd_vel_pub.publish(cmd_vel);
     }
     else{
@@ -665,6 +667,7 @@ int main(int argc, char **argv){
     ros::Publisher pub = nh.advertise<nav_msgs::Path>("dstar_path", 1);
     ros::Publisher pub2 = nh.advertise<nav_msgs::OccupancyGrid>("all_map_status", 1);
     ros::Publisher pub3 = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+    ros::Publisher pub4 = nh.advertise<std_msgs::Bool>("dstar_status", 1);
     pub_map = &pub2;
 
     ROS_INFO("Initialization started");
@@ -715,6 +718,9 @@ int main(int argc, char **argv){
                 cmd_vel.linear.x = 0;
                 cmd_vel.linear.y = 0;
                 pub3.publish(cmd_vel);
+                std_msgs::Bool dstar_status;
+                dstar_status.data = 1;
+                pub4.publish(dstar_status);
                 continue;
             }
             dstar.dstar_main(dynamic_map_msg, transformStamped.transform.translation.x, transformStamped.transform.translation.y, map_frame_name, tfBuffer);

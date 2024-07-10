@@ -9,6 +9,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include<geometry_msgs/PointStamped.h>
+#include <std_msgs/Bool.h>
 
 const double PI = 3.14159265358979323846;
 
@@ -20,7 +21,7 @@ geometry_msgs::TransformStamped transformRotbaseToVirtual;
 geometry_msgs::TransformStamped transformGimbalToRotbase;
 geometry_msgs::TransformStamped transformMapToGimbal;
 geometry_msgs::TransformStamped loc;
-
+bool status = 0;
 
 union FloatToByte{
     float f;
@@ -61,6 +62,7 @@ public:
             memcpy(&this->goal_x, &buffer[10], sizeof(float));
             memcpy(&this->goal_y, &buffer[14], sizeof(float));
             buffer.erase(buffer.begin(), buffer.begin()+read_length);
+            this->receive_message = 1;
             // ROS_INFO("Read from buffer");
             return true;
         }
@@ -81,6 +83,13 @@ void cmdVelCallback(const geometry_msgs::Twist::ConstPtr &msg)
 {
     cmd_vel = *msg;
     printf("msg_received");
+    // std::cout<<cmd_vel.linear.x<<' '<<cmd_vel.linear.y<<std::endl;
+}
+void StatusCallback(const std_msgs::Bool::ConstPtr &msg)
+{
+    // cmd_vel = *msg;
+    status = 1;
+    // printf("msg_received");
     // std::cout<<cmd_vel.linear.x<<' '<<cmd_vel.linear.y<<std::endl;
 }
 std::pair<double, double> getGoalType[4]={{-0.055942609906196594,0.009506076574325562},{-1.3484139442443848
@@ -166,6 +175,7 @@ int main(int argc, char** argv)
     }
 
     ros::Subscriber sub = nh.subscribe(vel_topic, 1000, cmdVelCallback);
+    ros::Subscriber sub_status = nh.subscribe("/dstar_status", 1000, StatusCallback);
     ros::Publisher clicked_point_pub=nh.advertise<geometry_msgs::PointStamped>("clicked_point",1);
 
     tf2_ros::TransformBroadcaster tfb;
@@ -238,7 +248,8 @@ int main(int argc, char** argv)
         message.receive_message = 0;
         //whether arrived
         ByteToByte arrived;//0 move, 1 arrive
-        arrived.f = 0;
+        arrived.f = status;
+        status = 0;
         std::copy(std::begin(arrived.bytes),std::end(arrived.bytes),&buffer_send[10]);
         // Write to the serial port
         size_t bytes_written = ser.write(buffer_send,write_length);
