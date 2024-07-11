@@ -162,6 +162,7 @@ add_executable(real_robot_transform src/real_robot_transform.cpp)
 add_executable(real_robot_transform_3d src/real_robot_transform_3d.cpp include/bot_sim/EKF.h)
 add_executable(cmd2ser src/cmd2ser.cpp)
 add_executable(ser2msg src/ser2msg.cpp)
+add_executable(ser2msg_decision src/ser2msg_decision.cpp)
 add_executable(wavefront src/wavefront.cpp)
 add_executable(test_transform src/test_transform.cpp)
 add_executable(lidar_filter src/lidar_filter.cpp)
@@ -201,6 +202,9 @@ target_link_libraries(cmd2ser
   ${catkin_LIBRARIES}
 )
 target_link_libraries(ser2msg
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(ser2msg_decision
   ${catkin_LIBRARIES}
 )
 target_link_libraries(wavefront
