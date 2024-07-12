@@ -281,7 +281,7 @@ dstarlite::~dstarlite(){
 }
 void dstarlite::when_receive_new_goal(geometry_msgs::PointStamped::ConstPtr goal_pose_msg, double real_start_x, double real_start_y){
     int start_x, start_y, goal_x, goal_y;
-    ROS_INFO("goal_x: %lf goal_y: %lf start_x: %lf start_y: %lf", goal_pose_msg->point.x, goal_pose_msg->point.y, real_start_x, real_start_y);
+    ROS_INFO("goal_x: %lf goal_y: %lf start_x: %lf start_y: %lf resolution: %lf", goal_pose_msg->point.x, goal_pose_msg->point.y, real_start_x, real_start_y, resolution);
     // ROS_INFO("get_real_goal_info");
     goal_x = from_real_x_to_map_x(goal_pose_msg->point.x);
     goal_y = from_real_y_to_map_y(goal_pose_msg->point.y);
