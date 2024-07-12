@@ -55,10 +55,10 @@ public:
         else if (buffer[0] == SOF && buffer[read_length-1] == eof) {
             memcpy(&this->relative_angle, &buffer[1], sizeof(float));
             memcpy(&this->imu_angle, &buffer[5], sizeof(float));
-            char temp;
+            unsigned char temp;
             memcpy(&temp, &buffer[9], sizeof(char));
-            // ROS_INFO("goal_type: %d", (int)temp);
-            this->goal_type = (int)temp;
+            // ROS_INFO("goal_type: %d", (unsigned int)temp);
+            this->goal_type = (unsigned int)temp;
             memcpy(&this->goal_x, &buffer[10], sizeof(float));
             memcpy(&this->goal_y, &buffer[14], sizeof(float));
             buffer.erase(buffer.begin(), buffer.begin()+read_length);
@@ -94,10 +94,10 @@ void StatusCallback(const std_msgs::Bool::ConstPtr &msg)
 }
 std::pair<double, double> getGoalType[4]={{-0.055942609906196594,0.009506076574325562},{-1.3484139442443848
 ,1.6214642524719238},{1.3867688179016113,4.585798740386963},{1.732113003730774,3.1185054779052734}};
-double angles[4] = {0,PI/2,PI,3*PI/2};
+double angles[4] = {0,0,0,0};
 int main(int argc, char** argv)
 {
-    std::string node_name = "ser2msg";
+    std::string node_name = "ser2msg_decision";
     ros::init(argc, argv, node_name);
 
     ros::NodeHandle nh;
@@ -282,7 +282,6 @@ int main(int argc, char** argv)
             clicked_point_pub.publish(clicked_point);
             ROS_INFO("%d",message.goal_type);
         }
-        ROS_INFO("%f %f", message.relative_angle, message.imu_angle);
            // Write data to serial port
         // Linear velocities x
         FloatToByte linear_x;
@@ -304,14 +303,14 @@ int main(int argc, char** argv)
         geometry_msgs::PointStamped source_point;
         source_point.header.frame_id = "virtual_frame";
         source_point.header.stamp = ros::Time(0);
-        source_point.point.x = cos(angels[index]);
-        source_point.point.y = sin(angels[index]);
+        source_point.point.x = cos(angles[index]);
+        source_point.point.y = sin(angles[index]);
         source_point.point.z = 0;
         geometry_msgs::PointStamped target_point;
         tf2::doTransform(source_point, target_point, tf_rot_from_map_to_virtual);
-        double x = target_point.point.x;
-        double y = target_point.point.y;
-        double angle = atan2(y,x);
+        double rx = target_point.point.x;
+        double ry = target_point.point.y;
+        double angle = atan2(ry,rx);
         omega.f = angle;
         std::copy(std::begin(omega.bytes),std::end(omega.bytes),&buffer_send[9]);
         //received message
@@ -329,6 +328,7 @@ int main(int argc, char** argv)
         if (bytes_written < write_length){
             ROS_ERROR("Failed to write all bytes to the serial port");
         }
+        ROS_INFO("%f %f %f", message.relative_angle, message.imu_angle, angle);
         ros::spinOnce(); 
         rate.sleep();
     }

@@ -40,8 +40,14 @@ class dstarlite{
         void when_receive_new_dynamic_map(nav_msgs::OccupancyGrid::ConstPtr dynamic_map_msg, std::string map_frame_name, tf2_ros::Buffer& tfBuffer);
         void try_to_find_path();
         bool old_path_still_work(int start_x, int start_y);
-        int from_real_x_to_map_x(double x){return (x - initial_x) / resolution;}
-        int from_real_y_to_map_y(double y){return (y - initial_y) / resolution;}
+        int from_real_x_to_map_x(double x){
+            // ROS_INFO("from_real_x_to_map_x: %lf %lf %lf", x, initial_x, resolution);
+            return (x - initial_x) / resolution;
+        }
+        int from_real_y_to_map_y(double y){
+            // ROS_INFO("from_real_y_to_map_y: %lf %lf %lf", y, initial_y, resolution);
+            return (y - initial_y) / resolution;
+        }
         double calculate_velocity(Nodeptr cur);
         double calculate_edge_value(Nodeptr cur);
         dstarlite(std::string map_topic, double x0, double k, double L, double x01, double k1, double L1, double start_decrease_dis, double min_velocity_rate);
@@ -275,14 +281,18 @@ dstarlite::~dstarlite(){
 }
 void dstarlite::when_receive_new_goal(geometry_msgs::PointStamped::ConstPtr goal_pose_msg, double real_start_x, double real_start_y){
     int start_x, start_y, goal_x, goal_y;
+    ROS_INFO("goal_x: %lf goal_y: %lf start_x: %lf start_y: %lf", goal_pose_msg->point.x, goal_pose_msg->point.y, real_start_x, real_start_y);
+    // ROS_INFO("get_real_goal_info");
     goal_x = from_real_x_to_map_x(goal_pose_msg->point.x);
     goal_y = from_real_y_to_map_y(goal_pose_msg->point.y);
+    // ROS_INFO("get_real_start_info");
     if(final_goal_node != nullptr&&final_goal_node->x == goal_x && final_goal_node->y == goal_y)return;
     start_x = from_real_x_to_map_x(real_start_x);
     start_y = from_real_y_to_map_y(real_start_y);
     final_goal_node = map[goal_x][goal_y];
     origin_start_node = start_node = map[start_x][start_y];
     d_manhattan_dis_to_start = 0;
+    ROS_INFO("Clear Map");
     reset();
     dstar_list.clear();
     changed_obstacle_nodes.clear();

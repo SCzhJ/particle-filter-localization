@@ -46,7 +46,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## To declare and build messages, services or actions from within this
 ## package, follow these steps:
 ## * Let MSG_DEP_SET be the set of packages whose message types you use in
-##   your messages/services/actions (e.g. std_msgs, actionlib_msgs, ...).
+##   your messages/services/actions (e.g. std_msgs, actionlcib_msgs, ...).
 ## * In the file package.xml:
 ##   * add a build_depend tag for "message_generation"
 ##   * add a build_depend and a exec_depend tag for each package in MSG_DEP_SET
