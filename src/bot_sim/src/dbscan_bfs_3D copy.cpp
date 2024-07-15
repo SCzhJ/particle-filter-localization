@@ -360,87 +360,46 @@ int max_radar_x = -1e8, max_radar_y = -1e8, min_radar_x = 1e8, min_radar_y = 1e8
 geometry_msgs::TransformStamped transformStamped;
 pcl::PointCloud<pcl::PointXYZ>::Ptr scan_record(new pcl::PointCloud<pcl::PointXYZ>);
 bool get_scan;
+
+void odom_callback(const nav_msgs::Odometry::ConstPtr& msg)
+{
+    //获取平移信息
+    robot_pos_x = msg->pose.pose.position.x;
+    robot_pos_y = msg->pose.pose.position.y;
+    robot_pos_z = msg->pose.pose.position.z;
+    //获取旋转信息
+    robot_quat_x = msg->pose.pose.orientation.x;
+    robot_quat_y = msg->pose.pose.orientation.y;
+    robot_quat_z = msg->pose.pose.orientation.z;
+    robot_quat_w = msg->pose.pose.orientation.w;
+}
+
 void msgs_to_grid(const sensor_msgs::PointCloud2ConstPtr& msg)
 {   
     pcl::fromROSMsg(*msg, *scan_record);
-    // ROS_INFO("Get map!");
-    // printf("get_scan");
-    // 声明grid变量
-    nav_msgs::OccupancyGrid grid;
-
-    // 设置占用网格的基本属性
-    grid.header.frame_id = frame_name;// 调试雷达时改为"odom'->"laser"
-    grid.info.resolution = 0.05;  // 网格的分辨率为0.05米
-    grid.info.width = MAXN;  // 网格的宽度为500个单元 uint32
-    grid.info.height = MAXN;  // 网格的高度为500个单元 uint32
-
-    // 初始化占用网格的数据
-    grid.data.resize(grid.info.width * grid.info.height, 0);
-    // 转换数据类型 
-    float x_origin = -static_cast<float>(grid.info.width * grid.info.resolution / 2.0);
-    float y_origin = -static_cast<float>(grid.info.height * grid.info.resolution / 2.0);
-    grid.info.origin.position.x = x_origin;// ladar
-    grid.info.origin.position.y = y_origin;// ladar
-    grid.info.origin.position.z = 0.0;
-    // 创建一个二维数组
-    vector<vector<double> > grid_vector(grid.info.height, vector<double>(grid.info.width, 0));
-    // 创建储存雷达数据的二维数组
-    int data_size = scan_record->points.size();
-    // 将激光扫描数据转换为占用网格
-
-    //dbscan
-    vector<dbscan_Point> dbscan_data;
-    for(size_t i = 0; i < scan_record->points.size(); ++i){
-        dbscan_Point p;
-        // 计算激光点的坐标(极坐标系转换为笛卡尔坐标系)
-        p.x= scan_record->points[i].x;
-        p.y= scan_record->points[i].y;
-        p.z= scan_record->points[i].z;
-        if(isnan(p.x)||isnan(p.y)||isnan(p.z))continue;
-        if(round((p.x - x_origin) / grid.info.resolution)<0 || round((p.x - x_origin) / grid.info.resolution)>=grid.info.width || round((p.y - y_origin) / grid.info.resolution)<0 || round((p.y - y_origin) / grid.info.resolution)>=grid.info.height)continue;
-        // cout<<p.x<<' '<<p.y<<"\n";
-        dbscan_data.push_back(p);
-    }
-    int cnt=0;
-    dbscan(dbscan_data, epsilon, minPts, cnt);
-
-        // 将笛卡尔坐标转换为占用网格的索引 原点在网格的中心
-    for(size_t i = 0; i < dbscan_data.size(); ++i){
-        dbscan_data[i].x =(dbscan_data[i].x - x_origin) / grid.info.resolution;
-        dbscan_data[i].y =(dbscan_data[i].y - y_origin) / grid.info.resolution;
-        if(!dbscan_data[i].noise){
-            int x = round(dbscan_data[i].x);
-            int y = round(dbscan_data[i].y);
-            grid_vector[y][x] = 100;
-        }
-    }
-        
-    //膨胀
-    bfs(dbscan_data,grid_vector,grid.info.width,grid.info.height, dfs_decrease);
-
-    for (int i = 0; i < grid.info.height; ++i) {
-        for (int j = 0; j < grid.info.width; ++j) {
-            int index = i * grid.info.width + j;
-            //阈值设置
-            grid.data[index] = max(0, int(grid_vector[i][j]));
-        }
-    }
-    auto start_ = chrono::high_resolution_clock::now();
-    obscured_point_filter opf(grid.info.width, grid.info.height, dbscan_data);
-    vector<pair<int,int> > obscured_points = opf.get_obscured_points();
-    for(int i = 0; i < obscured_points.size(); i++){
-        int x = obscured_points[i].first;
-        int y = obscured_points[i].second;
-        int index = y * grid.info.width + x;
-        if(grid.data[index]!=100)grid.data[index] = -1;
-    }
+    get_scan=1;
     
-    auto end_ = chrono::high_resolution_clock::now();
-    chrono::duration<double> diff = end_-start_;
+}
 
-    grid_pub.publish(grid);
-    cout << "Time difference: " << diff.count() << " s\n";
-    
+void publish_transform(const ros::TimerEvent&)
+{
+    static tf2_ros::TransformBroadcaster br;
+    geometry_msgs::TransformStamped transformStamped;
+    // map->odom
+    transformStamped.header.stamp = ros::Time::now();
+    transformStamped.header.frame_id = "map";
+    transformStamped.child_frame_id = "odom";
+    transformStamped.transform.translation.x = 0;
+    transformStamped.transform.translation.y = 0;
+    transformStamped.transform.translation.z = 0;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, 0);
+    transformStamped.transform.rotation.x = 0;
+    transformStamped.transform.rotation.y = 0;
+    transformStamped.transform.rotation.z = 0;
+    transformStamped.transform.rotation.w = 0;
+
+    br.sendTransform(transformStamped);
 }
 
 
@@ -492,7 +451,111 @@ int main(int argc, char **argv)
     grid_pub = nh.advertise<nav_msgs::OccupancyGrid>("grid", 1); // (Topic Name, Queue Size)
     
     ros::Subscriber sub_1 = nh.subscribe("/test_scan", 1, msgs_to_grid); // 订阅sensor_msgs/LaserScan 并转换(Topic Name, Queue Size, Callback Function)
-    // ros::Subscriber sub_2 = nh.subscribe("odom", 10, &odom_callback);//订阅mav_msgs/Odometr
+    ros::Subscriber sub_2 = nh.subscribe("odom", 10, &odom_callback);//订阅mav_msgs/Odometry
+    ros::Rate rate(100);
+    while(ros::ok){
+        // ROS_INFO("dbscanstill_alive");
+        if(get_scan){
+            
+            // ROS_INFO("Get map!");
+            auto start_ = chrono::high_resolution_clock::now();
+            // printf("get_scan");
+            // 声明grid变量
+            nav_msgs::OccupancyGrid grid;
+
+            // 设置占用网格的基本属性
+            grid.header.frame_id = frame_name;// 调试雷达时改为"odom'->"laser"
+            grid.info.resolution = 0.05;  // 网格的分辨率为0.05米
+            grid.info.width = MAXN;  // 网格的宽度为500个单元 uint32
+            grid.info.height = MAXN;  // 网格的高度为500个单元 uint32
+
+            // 初始化占用网格的数据
+            grid.data.resize(grid.info.width * grid.info.height, 0);
+            // 转换数据类型 
+            float x_origin = -static_cast<float>(grid.info.width * grid.info.resolution / 2.0);
+            float y_origin = -static_cast<float>(grid.info.height * grid.info.resolution / 2.0);
+            grid.info.origin.position.x = x_origin;// ladar
+            grid.info.origin.position.y = y_origin;// ladar
+            grid.info.origin.position.z = 0.0;
+            tf::Quaternion q(robot_quat_x, robot_quat_y, robot_quat_z, robot_quat_w);
+            tf::Matrix3x3 m(q);
+            double roll, pitch, yaw;
+            m.getRPY(roll, pitch, yaw);
+            // 创建一个二维数组
+            vector<vector<double> > grid_vector(grid.info.height, vector<double>(grid.info.width, 0));
+            // 创建储存雷达数据的二维数组
+            int data_size = scan_record->points.size();
+            // 将激光扫描数据转换为占用网格
+
+            //dbscan
+            tf2::Transform tf_transform;
+            tf2::fromMsg(transformStamped.transform, tf_transform);
+            try{
+                transformStamped = tfBuffer.lookupTransform(child_frame, parent_frame, ros::Time(0));
+            }
+            catch (tf2::TransformException &ex){
+                cout << "Error: " << ex.what() << endl;
+            }
+            vector<dbscan_Point> dbscan_data;
+            for(size_t i = 0; i < scan_record->points.size(); ++i){
+                dbscan_Point p;
+                // 计算激光点的坐标(极坐标系转换为笛卡尔坐标系)
+                p.x= scan_record->points[i].x;
+                p.y= scan_record->points[i].y;
+                p.z= scan_record->points[i].z;
+                tf2::Vector3 point_in(p.x, p.y, p.z);
+                tf2::Vector3 point_out = tf_transform * point_in;
+                p.x=point_out[0];
+                p.y=point_out[1];
+                p.z=point_out[2];
+                if(isnan(p.x)||isnan(p.y)||isnan(p.z))continue;
+                if(round((p.x - x_origin) / grid.info.resolution)<0 || round((p.x - x_origin) / grid.info.resolution)>=grid.info.width || round((p.y - y_origin) / grid.info.resolution)<0 || round((p.y - y_origin) / grid.info.resolution)>=grid.info.height)continue;
+                // cout<<p.x<<' '<<p.y<<"\n";
+                dbscan_data.push_back(p);
+            }
+            int cnt=0;
+            dbscan(dbscan_data, epsilon, minPts, cnt);
+        
+                // 将笛卡尔坐标转换为占用网格的索引 原点在网格的中心
+            for(size_t i = 0; i < dbscan_data.size(); ++i){
+                dbscan_data[i].x =(dbscan_data[i].x - x_origin) / grid.info.resolution;
+                dbscan_data[i].y =(dbscan_data[i].y - y_origin) / grid.info.resolution;
+                if(!dbscan_data[i].noise){
+                    int x = round(dbscan_data[i].x);
+                    int y = round(dbscan_data[i].y);
+                    grid_vector[y][x] = 100;
+                }
+            }
+                
+            //膨胀
+            bfs(dbscan_data,grid_vector,grid.info.width,grid.info.height, dfs_decrease);
+
+            for (int i = 0; i < grid.info.height; ++i) {
+                for (int j = 0; j < grid.info.width; ++j) {
+                    int index = i * grid.info.width + j;
+                    //阈值设置
+                    grid.data[index] = max(0, int(grid_vector[i][j]));
+                }
+            }
+            obscured_point_filter opf(grid.info.width, grid.info.height, dbscan_data);
+            vector<pair<int,int> > obscured_points = opf.get_obscured_points();
+            for(int i = 0; i < obscured_points.size(); i++){
+                int x = obscured_points[i].first;
+                int y = obscured_points[i].second;
+                int index = y * grid.info.width + x;
+                if(grid.data[index]!=100)grid.data[index] = -1;
+            }
+            
+            auto end_ = chrono::high_resolution_clock::now();
+            chrono::duration<double> diff = end_-start_;
+
+            // cout << "Time difference: " << diff.count() << " s\n";
+            grid_pub.publish(grid);
+            get_scan=0;
+        }
+        ros::spinOnce();
+        rate.sleep();
+    }
     // ros::Timer timer = nh.createTimer(ros::Duration(0.1), publish_transform);  // 每隔0.1秒发布一次坐标变换
     ros::spin();
 

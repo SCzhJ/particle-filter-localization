@@ -229,9 +229,6 @@ dstarlite::dstarlite(std::string map_topic, double x0, double k, double L, doubl
         this->L1 = L1;
         this->start_decrease_dis = start_decrease_dis;
         this->min_velocity_rate = min_velocity_rate;
-        this->origin_start_node = nullptr;
-        this->start_node = nullptr;
-        this->final_goal_node = nullptr;
         //needcode to initialize max_x and max_y;
         map = new Nodeptr*[max_x];
         std::queue<Nodeptr> q;

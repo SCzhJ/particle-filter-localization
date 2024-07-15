@@ -340,6 +340,7 @@ void dstarlite::when_receive_new_dynamic_map(nav_msgs::OccupancyGrid::ConstPtr d
             int y = from_real_y_to_map_y(map_vector.y());
             // ROS_INFO("dstar node: %lf %lf %d %d", map_vector.x(), map_vector.y(), x, y);
             if(x < 0 || x >= max_x || y < 0 || y >= max_y || dynamic_map_msg->data[index] == -1)continue;
+            if((double)dynamic_map_msg->data[index] < map[x][y]->obstacle_possibility && map[x][y]->round_for_dynamic_map + 2 >= for_dynamic_map_round)continue;
             changed_obstacle_nodes.erase(map[x][y]);
             map[x][y]->round_for_dynamic_map = for_dynamic_map_round;
             changed_obstacle_nodes.insert(map[x][y]);
@@ -621,7 +622,7 @@ void record_goal_info(const geometry_msgs::PointStamped::ConstPtr& msg){
     ROS_INFO("get goal info");
 }
 int main(int argc, char **argv){
-    std::string node_name = "dstarlite";
+    std::string node_name = "dstarlite_pointcloud";
     ros::init(argc, argv, node_name);
     ros::NodeHandle nh;
 

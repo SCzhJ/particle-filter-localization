@@ -19,26 +19,18 @@ double slope_1,slp_first_RADIUS, height_1;
 double slope_2, slp_second_RADIUS, height_2;
 double slope_3,slp_third_RADIUS, height_3;
 
-bool get_msg_left = 0;
-bool get_msg_right = 0;
+bool get_msg = 0;
 std::string base_frame;
 std::string laser_frame;
-std::string scan_topic_left;
-std::string scan_topic_right;
+std::string scan_topic;
 std::string new_scan_topic;
 ros::Publisher pub;
-livox_ros_driver2::CustomMsg scan_copy_left;
-livox_ros_driver2::CustomMsg scan_copy_right;
+livox_ros_driver2::CustomMsg scan_copy;
 geometry_msgs::TransformStamped transformStamped;
-void scanCallback_left(const livox_ros_driver2::CustomMsg &scan)
+void scanCallback(const livox_ros_driver2::CustomMsg &scan)
 {
-    scan_copy_left = scan;
-    get_msg_left = 1;
-}
-void scanCallback_right(const livox_ros_driver2::CustomMsg &scan)
-{
-    scan_copy_right = scan;
-    get_msg_right = 1;
+    scan_copy = scan;
+    get_msg = 1;
 }
 
 double max_dis=0;
@@ -51,7 +43,7 @@ bool filter(double x, double y, double z){
 }
 int main(int argc, char **argv)
 {
-    std::string node_name = "threeD_lidar_merge_pointcloud";
+    std::string node_name = "threeD_lidar_merge_pointcloud_test";
     ros::init(argc, argv, node_name);
     ros::NodeHandle nh;
 
@@ -60,14 +52,9 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to retrieve parameter 'laser_frame'");
         return -1;
     }
-    if (!nh.getParam("/" + node_name + "/scan_topic_left", scan_topic_left))
+    if (!nh.getParam("/" + node_name + "/scan_topic", scan_topic))
     {
-        ROS_ERROR("Failed to retrieve parameter 'scan_topic_left'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/scan_topic_right", scan_topic_right))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'scan_topic_right'");
+        ROS_ERROR("Failed to retrieve parameter 'scan_topic'");
         return -1;
     }
     if (!nh.getParam("/" + node_name + "/new_scan_topic", new_scan_topic))
@@ -76,34 +63,24 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    ros::Subscriber sub_left = nh.subscribe(scan_topic_left, 1, scanCallback_left);
-    ros::Subscriber sub_right = nh.subscribe(scan_topic_right, 1, scanCallback_right);
+    ros::Subscriber sub = nh.subscribe(scan_topic, 1, scanCallback);
     pub = nh.advertise<sensor_msgs::PointCloud2>(new_scan_topic, 1);
     ros::Rate rate(50.0);
     pcl::PointCloud<pcl::PointXYZ> pcl_cloud;
     while (ros::ok())
     {
-        if (!get_msg_left||!get_msg_right)
+        if (!get_msg)
         {
             ros::spinOnce();
             continue;
         }
-        auto scan_new = scan_copy_right;
-        auto scan_record_left = scan_copy_left;
-        auto scan_record_right = scan_copy_right;
+        auto scan_record = scan_copy;
         pcl_cloud.points.clear();
-        for (int i = 0; i < scan_record_left.points.size(); i++){
-            if(!filter(scan_record_left.points[i].x, scan_record_left.points[i].y, scan_record_left.points[i].z))continue;
-            double x = scan_record_left.points[i].x - 0.011;
-            double y = -scan_record_left.points[i].y + 0.02329;
-            double z = -scan_record_left.points[i].z - 0.04412;
-            pcl_cloud.points.push_back(pcl::PointXYZ(x, y, z));
-        }
-        for (int i = 0; i < scan_record_right.points.size(); i++){
-            if(!filter(scan_record_right.points[i].x, scan_record_right.points[i].y, scan_record_right.points[i].z))continue;
-            double x = scan_record_right.points[i].x - 0.011;
-            double y = -scan_record_right.points[i].y + 0.02329;
-            double z = -scan_record_right.points[i].z - 0.04412;
+        for (int i = 0; i < scan_record.points.size(); i++){
+            if(!filter(scan_record.points[i].x, scan_record.points[i].y, scan_record.points[i].z))continue;
+            double x = scan_record.points[i].x - 0.011;
+            double y = -scan_record.points[i].y + 0.02329;
+            double z = -scan_record.points[i].z - 0.04412;
             pcl_cloud.points.push_back(pcl::PointXYZ(x, y, z));
         }
         // for(int i=(int)distances.size()-1;i>=0;i--)printf("%lf ",distances[i]);
@@ -115,7 +92,7 @@ int main(int argc, char **argv)
         pub.publish(output);
         // ---
         // printf("Published new scan\n");
-        get_msg_left = get_msg_right = 0;
+        get_msg = 0;
         rate.sleep();
     }
     return 0;

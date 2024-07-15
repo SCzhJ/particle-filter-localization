@@ -19,27 +19,19 @@ double slope_1,slp_first_RADIUS, height_1;
 double slope_2, slp_second_RADIUS, height_2;
 double slope_3,slp_third_RADIUS, height_3;
 
-bool get_msg_left = 0, get_msg_right = 0;
+bool get_msg = 0;
 std::string base_frame;
 std::string laser_frame;
-std::string scan_topic_left;
-std::string scan_topic_right;
+std::string scan_topic;
 std::string new_scan_topic;
 ros::Publisher pub;
-livox_ros_driver2::CustomMsg scan_copy_left;
-livox_ros_driver2::CustomMsg scan_copy_right;
+livox_ros_driver2::CustomMsg scan_copy;
 geometry_msgs::TransformStamped transformStamped;
-void scanCallback_left(const livox_ros_driver2::CustomMsg &scan)
+void scanCallback(const livox_ros_driver2::CustomMsg &scan)
 {
-    scan_copy_left = scan;
-    get_msg_left = 1;
+    scan_copy = scan;
+    get_msg = 1;
 }
-void scanCallback_right(const livox_ros_driver2::CustomMsg &scan)
-{
-    scan_copy_right = scan;
-    get_msg_right = 1;
-}
-
 double max_dis=0;
 std::vector<double> distances;
 
@@ -77,7 +69,7 @@ bool satisfied(double nx, double ny, double z){
 
 int main(int argc, char **argv)
 {
-    std::string node_name = "threeD_lidar_filter";
+    std::string node_name = "threeD_lidar_filter_pointcloud";
     ros::init(argc, argv, node_name);
     ros::NodeHandle nh;
 
@@ -91,14 +83,9 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to retrieve parameter 'laser_frame'");
         return -1;
     }
-    if (!nh.getParam("/" + node_name + "/scan_topic_left", scan_topic_left))
+    if (!nh.getParam("/" + node_name + "/scan_topic", scan_topic))
     {
-        ROS_ERROR("Failed to retrieve parameter 'scan_topic_left'");
-        return -1;
-    }
-    if (!nh.getParam("/" + node_name + "/scan_topic_right", scan_topic_right))
-    {
-        ROS_ERROR("Failed to retrieve parameter 'scan_topic_right'");
+        ROS_ERROR("Failed to retrieve parameter 'scan_topic'");
         return -1;
     }
     if (!nh.getParam("/" + node_name + "/new_scan_topic", new_scan_topic))
@@ -158,8 +145,7 @@ int main(int argc, char **argv)
     }
 
 
-    ros::Subscriber sub_left = nh.subscribe(scan_topic_left, 1, scanCallback_left);
-    ros::Subscriber sub_right = nh.subscribe(scan_topic_right, 1, scanCallback_right);
+    ros::Subscriber sub = nh.subscribe(scan_topic, 1, scanCallback);
     ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2>(new_scan_topic, 1);
 
     tf2_ros::Buffer tfBuffer;
@@ -171,7 +157,7 @@ int main(int argc, char **argv)
     // ---
     while (ros::ok())
     {
-        if (!get_msg_left||!get_msg_right)
+        if (!get_msg)
         {
             ros::spinOnce();
             continue;
@@ -186,31 +172,15 @@ int main(int argc, char **argv)
         }
         max_dis=0;
         distances.clear();
-        auto scan_record_left = scan_copy_left;
-        auto scan_record_right = scan_copy_right;
+        auto scan_record = scan_copy;
         pcl_cloud.points.clear();
         tf2::Transform tf_transform;
         tf2::fromMsg(transformStamped.transform, tf_transform);
-        for (int i = 0; i < scan_record_left.points.size(); i++)
+        for (int i = 0; i < scan_record.points.size(); i++)
         {
-            double x = scan_record_left.points[i].x - 0.011;
-            double y = -scan_record_left.points[i].y - 0.02329;
-            double z = -scan_record_left.points[i].z + 0.04412;
-            tf2::Vector3 point_in(x, y, z);
-            tf2::Vector3 point_out = tf_transform * point_in;
-            double nx = point_out.x();
-            double ny = point_out.y();
-            double nz = point_out.z();
-            if (satisfied(nx,ny,-z))
-            {
-                pcl_cloud.points.push_back(pcl::PointXYZ(nx, ny, nz));
-            }
-        }
-        for (int i = 0; i < scan_record_right.points.size(); i++)
-        {
-            double x = scan_record_right.points[i].x - 0.011;
-            double y = -scan_record_right.points[i].y - 0.02329;
-            double z = -scan_record_right.points[i].z + 0.04412;
+            double x = scan_record.points[i].x - 0.011;
+            double y = -scan_record.points[i].y - 0.02329;
+            double z = -scan_record.points[i].z + 0.04412;
             tf2::Vector3 point_in(x, y, z);
             tf2::Vector3 point_out = tf_transform * point_in;
             double nx = point_out.x();
@@ -232,7 +202,7 @@ int main(int argc, char **argv)
         pub2.publish(output);
         // ---
         // printf("Published new scan\n");
-        get_msg_left = get_msg_right = 0;
+        get_msg = 0;
         rate.sleep();
     }
     return 0;

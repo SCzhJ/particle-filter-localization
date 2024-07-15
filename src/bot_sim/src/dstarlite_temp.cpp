@@ -229,10 +229,11 @@ dstarlite::dstarlite(std::string map_topic, double x0, double k, double L, doubl
         this->L1 = L1;
         this->start_decrease_dis = start_decrease_dis;
         this->min_velocity_rate = min_velocity_rate;
-        this->origin_start_node = nullptr;
-        this->start_node = nullptr;
         this->final_goal_node = nullptr;
+        this->start_node = nullptr;
+        this->origin_start_node = nullptr;
         //needcode to initialize max_x and max_y;
+        ROS_INFO("max_x: %d max_y: %d", max_x, max_y);
         map = new Nodeptr*[max_x];
         std::queue<Nodeptr> q;
         for(int i = 0; i < max_x; i++){
@@ -398,7 +399,28 @@ void dstarlite::dstar_update_node(Nodeptr cur){
         dstar_list.insert(cur);
     }
 }
-
+void dstarlite::dstar_update_node(Nodeptr cur, Nodeptr succ){
+    if(cur == final_goal_node)return;
+    int previous_list_status = cur->dstar_list_status;
+    if(cur->dstar_list_status == IN_LIST){
+        dstar_list.erase(cur);
+        cur->dstar_list_status = OUT_LIST;
+    }
+    Nodeptr previous_succ = cur->succ;
+    double previous_rhs = cur->rhs;
+    double value = calculate_edge_value(cur)*calculate_edge_value(succ);
+    double new_rhs = cur->dis_to_goal + (cur->x == succ->x || cur->y == succ->y ? 1 : 1.414) * value;
+    if(new_rhs < cur->rhs){
+        cur->rhs = new_rhs;
+        cur->succ = succ;
+    }
+    if(previous_rhs == cur -> dis_to_goal && previous_succ != nullptr)lct->del(cur, previous_succ);
+    if(cur->rhs == cur->dis_to_goal && cur->succ != nullptr)lct->link(cur, cur->succ);
+    if(cur -> rhs != cur->dis_to_goal){    
+        cur->dstar_list_status = IN_LIST;
+        dstar_list.insert(cur);
+    }
+}
 void dstarlite::dstar_main(nav_msgs::OccupancyGrid::ConstPtr dynamic_map_msg, double real_start_x, double real_start_y, std::string map_frame_name, tf2_ros::Buffer& tfBuffer){
     int start_x = from_real_x_to_map_x(real_start_x);
     int start_y = from_real_y_to_map_y(real_start_y);
@@ -450,7 +472,7 @@ void dstarlite::dstar_update(Nodeptr end_node){
                 int nx = x + dx[i];
                 int ny = y + dy[i];
                 if(nx < 0 || nx >= max_x || ny < 0 || ny >= max_y)continue;
-                dstar_update_node(map[nx][ny]);
+                dstar_update_node(map[nx][ny], cur);
             }
             if(cur->succ != nullptr)lct->link(cur, cur->succ);
         }
@@ -688,6 +710,10 @@ int main(int argc, char **argv){
     ROS_INFO("Initialization started");
     dstarlite dstar(static_map_topic_name, x0_grid, k_grid, L_grid, x0_velocity, k_velocity, L_velocity, start_decrease_dis, min_velocity_rate);
     ROS_INFO("Initialization finished");
+    if(dstar.final_goal_node != nullptr){
+        ROS_ERROR("Failed to get final goal node");
+        return 0;
+    }
     bool have_first_goal = false;
     ros::Rate rate(30);
     tf2_ros::Buffer tfBuffer;
@@ -703,6 +729,10 @@ int main(int argc, char **argv){
                 ros::Duration(1.0).sleep();
             }
             ROS_INFO("get goal and dynamic map info");
+        if(dstar.final_goal_node != nullptr){
+            ROS_ERROR("Failed to get final goal node");
+            // return 0;
+        }
             dstar.when_receive_new_goal(goal_pose_msg, transformStamped.transform.translation.x, transformStamped.transform.translation.y);
             // dstar.dstar_main(dynamic_map_msg, transformStamped.transform.translation.x, transformStamped.transform.translation.y, map_frame_name, tfBuffer);
             // dstar.publish(transformStamped.transform.translation.x, transformStamped.transform.translation.y, pub, map_frame_name);
