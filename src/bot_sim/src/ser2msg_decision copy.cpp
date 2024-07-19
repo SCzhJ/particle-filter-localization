@@ -15,7 +15,7 @@ const double PI = 3.14159265358979323846;
 
 serial::Serial ser;
 const int write_length = 15;
-const int read_length = 19;
+const int read_length = 15;
 
 geometry_msgs::TransformStamped transformRotbaseToVirtual;
 geometry_msgs::TransformStamped transformGimbalToRotbase;
@@ -311,7 +311,7 @@ int main(int argc, char** argv)
         double rx = target_point.point.x;
         double ry = target_point.point.y;
         double angle = atan2(ry,rx);
-        omega.f = -angle;
+        omega.f = angle;
         std::copy(std::begin(omega.bytes),std::end(omega.bytes),&buffer_send[9]);
         //received message
         ByteToByte received_message;

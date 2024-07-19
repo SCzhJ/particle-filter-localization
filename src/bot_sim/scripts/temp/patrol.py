@@ -6,7 +6,7 @@ class ClickedPointsPublisher:
     def __init__(self, points_stamped):
         self.points_stamped = points_stamped
         self.pub = rospy.Publisher('/clicked_point', PointStamped, queue_size=10)
-        delta_t = 2
+        delta_t = 2.5
         self.rate = rospy.Rate(1/delta_t)  # 1 Hz
 
     def publish_points(self):
@@ -17,7 +17,7 @@ class ClickedPointsPublisher:
 
 if __name__ == "__main__":
     rospy.init_node('clicked_points_publisher')
-    points_xy = [[1,2],[3,4]]
+    points_xy = [[-0.5,0],[-0.5,1.0],[-1.5, 1.0]]
     points_stamped = []
     for i in range(len(points_xy)):
         point = PointStamped()

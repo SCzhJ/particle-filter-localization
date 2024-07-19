@@ -9,8 +9,8 @@
 
   <!-- optional arguments -->
   <arg name="use_imu" default="true" />
-  <arg name="invert_imu_acc" default="true" />
-  <arg name="invert_imu_gyro" default="true" />
+  <arg name="invert_imu_acc" default="false" />
+  <arg name="invert_imu_gyro" default="false" />
   <arg name="use_global_localization" default="false" /> 
   <arg name="imu_topic" default="/livox/imu_192_168_1_141_filtered" />
   <arg name="enable_robot_odometry_prediction" value="false" />
@@ -24,7 +24,7 @@
 
     <!-- globalmap_server_nodelet -->
     <node pkg="nodelet" type="nodelet" name="globalmap_server_nodelet" args="load hdl_localization/GlobalmapServerNodelet $(arg nodelet_manager)">
-      <param name="globalmap_pcd" value="$(find hdl_graph_slam)/map/innomap_jul14.pcd" />
+      <param name="globalmap_pcd" value="$(find hdl_graph_slam)/map/innowing_map_Jul18.pcd" />
       <param name="convert_utm_to_local" value="true" />
       <param name="downsample_resolution" value="0.1" />
     </node>

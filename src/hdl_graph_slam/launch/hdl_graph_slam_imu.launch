@@ -8,7 +8,7 @@
   <arg name="enable_imu_acc" default="true" />
   <arg name="enable_imu_ori" default="true" />
   <arg name="points_topic" default="/3Dlidar" />
-  <arg name="imu_topic" default="/livox/imu_192_168_1_141" />
+  <arg name="imu_topic" default="/livox/imu_192_168_1_141_filtered" />
 
   <!-- transformation between lidar and base_link -->
   <!-- <node pkg="tf" type="static_transform_publisher" name="lidar2base_publisher" args="0 0 0 0 0 0 base_link velodyne 10" />

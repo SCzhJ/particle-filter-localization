@@ -78,7 +78,7 @@ class dstarlite{
                     dis_to_goal = INF + 1;
                     manhattan_dis_to_start = INF;
                     rhs = INF;
-                    obstacle_possibility = static_obstacle_possibility;
+                    // obstacle_possibility = static_obstacle_possibility;
                     astar_list_status= dstar_list_status = NEW;
                     succ = father = son[0] = son[1] = nullptr;
                     appear_time = 0;
@@ -571,11 +571,32 @@ bool dstarlite::old_path_still_work(int start_x, int start_y){
     Nodeptr cur = map[start_x][start_y];
     return lct->find_root(cur) == lct->find_root(final_goal_node);
 }
+std::string static_map_topic_name;
+std::string map_frame_name;
+std::string robot_frame_name;
+std::string dynamic_map_topic_name;
+std::string goal_topic_name;
+double x0_grid;
+double k_grid;
+double L_grid;
+double x0_velocity;
+double k_velocity;
+double L_velocity;
+double start_decrease_dis;
+double min_velocity_rate;
 bool get_dynamic_map_info = false;
+bool have_first_goal = false;
 nav_msgs::OccupancyGrid::ConstPtr dynamic_map_msg;
+dstarlite* dstar_ptr;
+tf2_ros::Buffer* tfBuffer_ptr;
 void record_dynamic_map_info(const nav_msgs::OccupancyGrid::ConstPtr& msg){
     dynamic_map_msg = msg;    
-    get_dynamic_map_info = true;
+    if(have_first_goal){
+        ROS_INFO("get dynamic map info");
+        ROS_INFO("start_deal_with_dynamic_map");
+        dstar_ptr->when_receive_new_dynamic_map(dynamic_map_msg, map_frame_name, *tfBuffer_ptr);
+        ROS_INFO("finish");
+    }
     // ROS_INFO("get dynamic map info");
 }
 void dstarlite::try_to_find_path(){
@@ -626,57 +647,44 @@ int main(int argc, char **argv){
     ros::init(argc, argv, node_name);
     ros::NodeHandle nh;
 
-    std::string static_map_topic_name;
     if (!nh.getParam(node_name+"/"+"map_topic_name", static_map_topic_name)) ROS_ERROR("Failed to get param 'map_topic_name'");
     ROS_INFO("static_map_topic_name: %s", static_map_topic_name.c_str());
     
-    std::string map_frame_name;
     if (!nh.getParam(node_name+"/"+"map_frame_name", map_frame_name)) ROS_ERROR("Failed to get param 'map_frame_name'");
     ROS_INFO("map_frame_name: %s", map_frame_name.c_str());
     
-    std::string robot_frame_name;
     if (!nh.getParam(node_name+"/"+"robot_frame_name", robot_frame_name)) ROS_ERROR("Failed to get param 'robot_frame_name'");
     ROS_INFO("robot_frame_name: %s", robot_frame_name.c_str());
     
-    std::string dynamic_map_topic_name;
     if (!nh.getParam(node_name+"/"+"dynamic_map_topic_name", dynamic_map_topic_name)) ROS_ERROR("Failed to get param 'dynamic_map_topic_name'");
     ros::Subscriber dynamic_map_sub = nh.subscribe(dynamic_map_topic_name, 1, record_dynamic_map_info);
     ROS_INFO("dynamic_map_topic_name: %s", dynamic_map_topic_name.c_str());
     
-    std::string goal_topic_name;
     if (!nh.getParam(node_name+"/"+"goal_topic_name", goal_topic_name)) ROS_ERROR("Failed to get param 'goal_topic_name'");
     ros::Subscriber goal_sub = nh.subscribe(goal_topic_name, 1, record_goal_info);
     ROS_INFO("goal_topic_name: %s", goal_topic_name.c_str());
     
-    double x0_grid;
     if (!nh.getParam(node_name+"/"+"x0_grid", x0_grid)) ROS_ERROR("Failed to get param 'x0_grid'");
     ROS_INFO("x0_grid: %lf", x0_grid);
 
-    double k_grid;
     if (!nh.getParam(node_name+"/"+"k_grid", k_grid)) ROS_ERROR("Failed to get param 'k_grid'");
     ROS_INFO("k_grid: %lf", k_grid);
 
-    double L_grid;
     if (!nh.getParam(node_name+"/"+"L_grid", L_grid)) ROS_ERROR("Failed to get param 'L_grid'");
     ROS_INFO("L_grid: %lf", L_grid);
 
-    double x0_velocity;
     if (!nh.getParam(node_name+"/"+"x0_velocity", x0_velocity)) ROS_ERROR("Failed to get param 'x0_velocity'");
     ROS_INFO("x0_velocity: %lf", x0_velocity);
 
-    double k_velocity;
     if (!nh.getParam(node_name+"/"+"k_velocity", k_velocity)) ROS_ERROR("Failed to get param 'k_velocity'");
     ROS_INFO("k_velocity: %lf", k_velocity);
 
-    double L_velocity;
     if (!nh.getParam(node_name+"/"+"L_velocity", L_velocity)) ROS_ERROR("Failed to get param 'L_velocity'");
     ROS_INFO("L_velocity: %lf", L_velocity);
 
-    double start_decrease_dis;
     if (!nh.getParam(node_name+"/"+"start_decrease_dis", start_decrease_dis)) ROS_ERROR("Failed to get param 'start_decrease_dis'");
     ROS_INFO("start_decrease_dis: %lf", start_decrease_dis);
 
-    double min_velocity_rate;
     if (!nh.getParam(node_name+"/"+"min_velocity_rate", min_velocity_rate)) ROS_ERROR("Failed to get param 'min_velocity_rate'");
     ROS_INFO("min_velocity_rate: %lf", min_velocity_rate);
 
@@ -688,15 +696,16 @@ int main(int argc, char **argv){
 
     ROS_INFO("Initialization started");
     dstarlite dstar(static_map_topic_name, x0_grid, k_grid, L_grid, x0_velocity, k_velocity, L_velocity, start_decrease_dis, min_velocity_rate);
+    dstar_ptr = &dstar;
     ROS_INFO("Initialization finished");
-    bool have_first_goal = false;
     ros::Rate rate(30);
     tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener tfListener(tfBuffer);
+    tfBuffer_ptr = &tfBuffer;
     geometry_msgs::TransformStamped transformStamped;
     while(ros::ok){
         // ROS_INFO("loop");
-        if(get_goal_info && get_dynamic_map_info){
+        if(get_goal_info){
             try {
                 transformStamped = tfBuffer.lookupTransform(map_frame_name, robot_frame_name, ros::Time(0));
             } catch (tf2::TransformException &ex) {
@@ -710,13 +719,13 @@ int main(int argc, char **argv){
             get_goal_info = false;
             have_first_goal = true;
         }
-        if(have_first_goal && get_dynamic_map_info){
-            ROS_INFO("get dynamic map info");
-            ROS_INFO("start_deal_with_dynamic_map");
-            dstar.when_receive_new_dynamic_map(dynamic_map_msg, map_frame_name, tfBuffer);
-            ROS_INFO("finish");
-            get_dynamic_map_info = false;
-        }
+        // if(have_first_goal && get_dynamic_map_info){
+        //     ROS_INFO("get dynamic map info");
+        //     ROS_INFO("start_deal_with_dynamic_map");
+        //     dstar.when_receive_new_dynamic_map(dynamic_map_msg, map_frame_name, tfBuffer);
+        //     ROS_INFO("finish");
+        //     get_dynamic_map_info = false;
+        // }
         if(have_first_goal){
             try {
                 transformStamped = tfBuffer.lookupTransform(map_frame_name, robot_frame_name, ros::Time(0));

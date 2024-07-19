@@ -7,9 +7,12 @@ double gravity;
 void imuCallback(const sensor_msgs::Imu::ConstPtr& msg) {
     // 直接将接收到的消息发布到新的topic
     sensor_msgs::Imu imu_msg = *msg;
-    imu_msg.linear_acceleration.z *= gravity;
+    imu_msg.linear_acceleration.z *= -gravity;
     imu_msg.linear_acceleration.x *= gravity; 
-    imu_msg.linear_acceleration.y *= gravity;   
+    imu_msg.linear_acceleration.y *= -gravity;
+    // imu_msg.angular_velocity.x *= -1;
+    imu_msg.angular_velocity.y *= -1;
+    imu_msg.angular_velocity.z *= -1;
     imu_pub.publish(imu_msg);
 }
 

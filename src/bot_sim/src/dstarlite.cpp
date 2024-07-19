@@ -499,8 +499,8 @@ void dstarlite::publish(ros::Publisher& pub, std::string map_frame_name, ros::Pu
         double dy = final_aim->y - cur->y;
         double dis = sqrt(dx * dx + dy * dy);
         double new_velocity = calculate_velocity(cur);
-        cmd_vel.linear.x = dx / dis * new_velocity;
-        cmd_vel.linear.y = dy / dis * new_velocity;
+        cmd_vel.linear.x = dx / dis;
+        cmd_vel.linear.y = dy / dis;
         tf2::Vector3 old_cmd_vel = tf2::Vector3(cmd_vel.linear.x, cmd_vel.linear.y, 0);
         tf2::Transform tf_transform;
         transformStamped.transform.translation.x = 0;
@@ -508,9 +508,11 @@ void dstarlite::publish(ros::Publisher& pub, std::string map_frame_name, ros::Pu
         transformStamped.transform.translation.z = 0;
         tf2::fromMsg(transformStamped.transform, tf_transform);
         tf2::Vector3 new_cmd_vel = tf_transform * old_cmd_vel;
-        cmd_vel.linear.x = new_cmd_vel.x();
-        cmd_vel.linear.y = new_cmd_vel.y();
-        ROS_INFO("old_cmd_vel: %lf %lf new_cmd_vel: %lf %lf", old_cmd_vel.x(), old_cmd_vel.y(), new_cmd_vel.x(), new_cmd_vel.y());
+        double xy_lenth = sqrt(new_cmd_vel.x() * new_cmd_vel.x() + new_cmd_vel.y() * new_cmd_vel.y());
+        double z_angle = atan2(new_cmd_vel.z(), xy_lenth);
+        cmd_vel.linear.x = new_cmd_vel.x()/xy_lenth * new_velocity * (1 - z_angle/(15.0 / 360 * 2 * 3.1415926));
+        cmd_vel.linear.y = new_cmd_vel.y()/xy_lenth * new_velocity * (1 - z_angle/(15.0 / 360 * 2 * 3.1415926));
+        ROS_INFO("old_cmd_vel: %lf new_cmd_vel: %lf z_angle:", sqrt(old_cmd_vel.x()*old_cmd_vel.x()+old_cmd_vel.y()*old_cmd_vel.y()), sqrt(new_cmd_vel.x()*new_cmd_vel.x()+new_cmd_vel.y()*new_cmd_vel.y()), z_angle*180/3.1415926);
         cmd_vel_pub.publish(cmd_vel);
     }
     else{
