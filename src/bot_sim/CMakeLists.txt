@@ -178,6 +178,7 @@ add_executable(ser2msg_write_only src/ser2msg_write_only.cpp)
 add_executable(transform_listener src/transform_listener.cpp)
 add_executable(dstarlite src/dstarlite.cpp)
 add_executable(dstarlite_pointcloud src/dstarlite_pointcloud.cpp)
+add_executable(pc_vel_scaler src/pc_vel_scaler.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -253,6 +254,9 @@ target_link_libraries(dstarlite
   ${catkin_LIBRARIES}
 )
 target_link_libraries(dstarlite_pointcloud
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(pc_vel_scaler
   ${catkin_LIBRARIES}
 )
 ## Add cmake target dependencies of the executable

@@ -1,0 +1,94 @@
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl_conversions/pcl_conversions.h>
+
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+
+// Parameters
+double heading_angle_rad = 0;  // Example: 90 degrees in radians
+double angle_threshold_rad = M_PI / 18;  // 15 degrees in radians
+double z_threshold = 1.0;  // Example threshold for slope detection
+double voxel_leaf_size = 0.05;  // Leaf size for downsampling
+double dist = 2.2;
+
+// Callback function
+void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& input) {
+    // --- IF ADD DOWNSAMPLE, UNCOMMENT THE FOLLOWING CODE ---//
+
+    // Convert ROS message to PCL point cloud
+    // PointCloud::Ptr cloud(new PointCloud);
+    // pcl::fromROSMsg(*input, *cloud);
+    // // Downsample the point cloud using VoxelGrid filter
+    // pcl::VoxelGrid<pcl::PointXYZ> vg;
+    // PointCloud::Ptr cloud_filtered(new PointCloud);
+    // vg.setInputCloud(cloud);
+    // vg.setLeafSize(voxel_leaf_size, voxel_leaf_size, voxel_leaf_size);
+    // vg.filter(*cloud_filtered);
+    // ROS_INFO("Original Point Cloud Size: %ld, Filtered Point Cloud Size: %ld", cloud->points.size(), cloud_filtered->points.size());
+    // Transform point cloud to robot's coordinate frame (assuming robot is at origin)
+    // and filter points within the angular threshold
+
+    // --- IF ADD DOWNSAMPLE, UNCOMMENT THE ABOVE CODE ---//
+
+    // If No Downsample, uncomment the following code
+    PointCloud::Ptr cloud_filtered(new PointCloud);
+    pcl::fromROSMsg(*input, *cloud_filtered);
+    // If No Downsample, uncomment the above code
+
+    PointCloud::Ptr filtered_points(new PointCloud);
+    for (const auto& point : cloud_filtered->points) {
+        double dx = point.x;
+        double dy = point.y;
+        double angle = std::atan2(dy, dx);
+
+        if (std::abs(angle - heading_angle_rad) < angle_threshold_rad && dx*dx+dy*dy < dist * dist) {
+            filtered_points->points.push_back(point);
+        }
+    }
+
+    // Check the average z value of the filtered points
+    if (!filtered_points->points.empty()) {
+        double avg_z = 0.0;
+        for (const auto& point : filtered_points->points) {
+            avg_z += point.z;
+        }
+        avg_z /= filtered_points->points.size();
+
+        // ROS_INFO("Num Points: %ld", filtered_points->points.size());
+        // ROS_INFO("Average Z: %f", avg_z);
+
+        // detect the variance of distance on the x-y plane of the points
+        double avg_x = 0.0;
+        double avg_y = 0.0;
+        for (const auto& point : filtered_points->points) {
+            avg_x += point.x;
+            avg_y += point.y;
+        }
+        avg_x /= filtered_points->points.size();
+        avg_y /= filtered_points->points.size();
+        double variance = 0.0;
+        for (const auto& point : filtered_points->points) {
+            variance += (point.x - avg_x) * (point.x - avg_x) + (point.y - avg_y) * (point.y - avg_y);
+        }
+        variance /= filtered_points->points.size();
+        // ROS_INFO("Variance: %f", variance);
+        if(avg_z > z_threshold and variance > 0.7){
+            ROS_INFO("Slope Detected");
+
+        }
+    }
+}
+
+int main(int argc, char** argv) {
+    ros::init(argc, argv, "slope_detection_node");
+    ros::NodeHandle nh;
+
+    ros::Subscriber sub = nh.subscribe("/3Dlidar", 1, pointCloudCallback);
+    ros::spin();
+
+    return 0;
+}

@@ -14,7 +14,7 @@
         <!-- Params for velocity cost -->
         <param name="x0_velocity" type="double" value="150" />
         <param name="k_velocity" type="double" value="-0.25" />
-        <param name="L_velocity" type="double" value="2" />
+        <param name="L_velocity" type="double" value="1" />
 
         <!-- Params for velocity decrease when reaching goal -->
         <param name="start_decrease_dis" type="double" value="1.5" />
