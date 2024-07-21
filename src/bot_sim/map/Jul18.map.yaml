@@ -1,4 +1,4 @@
-image: /home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/map/Jul18.map.pgm
+image: /home/sentry_train_test/AstarTraining/sim_nav/src/bot_sim/map/Jul21.map.pgm
 resolution: 0.050000
 origin: [-10.124001, -8.152710, 0.000000]
 negate: 0

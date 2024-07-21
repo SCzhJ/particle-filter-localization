@@ -279,7 +279,7 @@ int main(int argc, char** argv)
                 clicked_point.point.y=message.goal_y;
                 clicked_point.point.z=0;
             }
-            clicked_point_pub.publish(clicked_point);
+            // clicked_point_pub.publish(clicked_point);
             ROS_INFO("%d",message.goal_type);
         }
            // Write data to serial port
