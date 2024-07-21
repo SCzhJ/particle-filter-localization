@@ -12,17 +12,28 @@ typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 // Parameters
 double heading_angle_rad = 0; 
 double angle_threshold_rad = M_PI / 36;
-double z_threshold = -0.38;
 double voxel_leaf_size = 0.05;  // Leaf size for downsampling
 double dist = 2.2;
-double variance_threshold = 0.15;
 
-// Moving average
-int moving_avg_count = 5;
-std::vector<double> moving_avg_z = std::vector<double>(moving_avg_count, 0.0);
-std::vector<double> moving_avg_var = std::vector<double>(moving_avg_count, 0.0);
-double moving_z = 0.0;
-double moving_var = 0.0;
+double slope_likelihood(PointCloud::Ptr cloud, double slope_angle) {
+    ROS_INFO("size: %ld", cloud->points.size());
+    double sum = 0;
+    for (const auto& point : cloud->points) {
+        double dx = point.x;
+        double dz = point.z;
+        sum += dx * std::cos(slope_angle) + dz * std::sin(slope_angle);
+    }
+    double avg = sum / cloud->points.size();
+    double var = 0;
+    for (const auto& point : cloud->points) {
+        double dx = point.x;
+        double dz = point.z;
+        var += std::pow(dx * std::cos(slope_angle) + dz * std::sin(slope_angle) - avg, 2);
+    }
+    // Calculate Standard Deviation
+    return std::sqrt(var / cloud->points.size());
+}
+
 
 // Callback function
 void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& input) {
@@ -57,51 +68,8 @@ void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& input) {
 
     // Check the average z value of the filtered points
     if (!filtered_points->points.empty()) {
-        double avg_z = 0.0;
-        for (const auto& point : filtered_points->points) {
-            avg_z += point.z;
-        }
-        avg_z /= filtered_points->points.size();
-
-
-        // detect the variance of distance on the x-y plane of the points
-        double avg_x = 0.0;
-        double avg_y = 0.0;
-        for (const auto& point : filtered_points->points) {
-            avg_x += point.x;
-            avg_y += point.y;
-        }
-        avg_x /= filtered_points->points.size();
-        avg_y /= filtered_points->points.size();
-        double variance = 0.0;
-        for (const auto& point : filtered_points->points) {
-            variance += (point.x - avg_x) * (point.x - avg_x) + (point.y - avg_y) * (point.y - avg_y);
-        }
-        variance /= filtered_points->points.size();
-
-        moving_avg_z.push_back(avg_z); moving_avg_z.erase(moving_avg_z.begin());
-        moving_avg_var.push_back(variance); moving_avg_var.erase(moving_avg_var.begin());
-        // get average of moving_avg_z and moving_avg_var
-        moving_z = 0.0; moving_var = 0.0;
-        for (const auto& z : moving_avg_z) {
-            moving_z += z;
-        }
-        for (const auto& var : moving_avg_var) {
-            moving_var += var;
-        }
-        moving_z /= moving_avg_z.size();
-        moving_var /= moving_avg_var.size();
-
-        // ROS_INFO("Num Points: %ld", filtered_points->points.size());
-        // ROS_INFO("Average Z: %f", avg_z);
-        // ROS_INFO("Variance: %f", variance);
-        if(moving_z > z_threshold and moving_var > variance_threshold){
-            ROS_INFO("Slope Detected");
-
-        }
-        else{
-            ROS_INFO("No Slope Detected");
-        }
+        double slope_likelihood_value = slope_likelihood(filtered_points, M_PI/9);
+        ROS_INFO("Slope likelihood: %f", slope_likelihood_value);
     }
 }
 

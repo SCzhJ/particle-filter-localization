@@ -510,9 +510,9 @@ void dstarlite::publish(ros::Publisher& pub, std::string map_frame_name, ros::Pu
         tf2::Vector3 new_cmd_vel = tf_transform * old_cmd_vel;
         double xy_lenth = sqrt(new_cmd_vel.x() * new_cmd_vel.x() + new_cmd_vel.y() * new_cmd_vel.y());
         double z_angle = atan2(new_cmd_vel.z(), xy_lenth);
-        cmd_vel.linear.x = new_cmd_vel.x()/xy_lenth * new_velocity * (1 - z_angle/(15.0 / 360 * 2 * 3.1415926));
-        cmd_vel.linear.y = new_cmd_vel.y()/xy_lenth * new_velocity * (1 - z_angle/(15.0 / 360 * 2 * 3.1415926));
-        ROS_INFO("old_cmd_vel: %lf new_cmd_vel: %lf z_angle:", sqrt(old_cmd_vel.x()*old_cmd_vel.x()+old_cmd_vel.y()*old_cmd_vel.y()), sqrt(new_cmd_vel.x()*new_cmd_vel.x()+new_cmd_vel.y()*new_cmd_vel.y()), z_angle*180/3.1415926);
+        cmd_vel.linear.x = new_cmd_vel.x()/xy_lenth * new_velocity * (std::min(1 - z_angle/(15.0 / 360 * 2 * 3.1415926), 2.0));
+        cmd_vel.linear.y = new_cmd_vel.y()/xy_lenth * new_velocity * (std::max(1 - z_angle/(15.0 / 360 * 2 * 3.1415926), 0.5));
+        ROS_INFO("old_cmd_vel: %lf new_cmd_vel: %lf z_angle:%lf", sqrt(old_cmd_vel.x()*old_cmd_vel.x()+old_cmd_vel.y()*old_cmd_vel.y()), sqrt(cmd_vel.linear.x*cmd_vel.linear.x+cmd_vel.linear.y*cmd_vel.linear.y), z_angle*180/3.1415926);
         cmd_vel_pub.publish(cmd_vel);
     }
     else{

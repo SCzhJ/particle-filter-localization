@@ -31,7 +31,7 @@ void listenTransform()
         double roll, pitch, yaw;
         m.getRPY(roll, pitch, yaw);
         qhdl.setRPY(roll, pitch, 0);
-        qhdl = qhdl.inverse();
+        // qhdl = qhdl.inverse();
         ROS_INFO("Quaternion_hdl: x=%f, y=%f, z=%f, w=%f", qhdl.x(), qhdl.y(), qhdl.z(), qhdl.w());
         received_msg = 1;
     } catch (tf2::TransformException &ex) {
@@ -85,6 +85,10 @@ int main(int argc, char** argv){
     transformStamped1.transform.translation.x = -0.011;
     transformStamped1.transform.translation.y = 0.19495+0.02329;
     transformStamped1.transform.translation.z = 0;
+    transformStamped1.transform.rotation.x = 0;
+    transformStamped1.transform.rotation.y = 0;
+    transformStamped1.transform.rotation.z = 0;
+    transformStamped1.transform.rotation.w = 1;
     tf2::Quaternion qx;
     qx.setRPY(PI, 0, 0);
     tf2::Quaternion qz;
@@ -96,10 +100,10 @@ int main(int argc, char** argv){
         if(received_msg){
             transformStamped1.header.stamp = ros::Time::now();
             auto q =  qhdl;
-            transformStamped1.transform.rotation.x = q.x();
-            transformStamped1.transform.rotation.y = q.y();
-            transformStamped1.transform.rotation.z = q.z();
-            transformStamped1.transform.rotation.w = q.w();
+            // transformStamped1.transform.rotation.x = q.x();
+            // transformStamped1.transform.rotation.y = q.y();
+            // transformStamped1.transform.rotation.z = q.z();
+            // transformStamped1.transform.rotation.w = q.w();
             broadcaster.sendTransform(transformStamped1);
             received_msg = 0;
         }

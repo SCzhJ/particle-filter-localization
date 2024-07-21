@@ -329,7 +329,7 @@ int main(int argc, char** argv)
             ROS_ERROR("Failed to write all bytes to the serial port");
         }
         ROS_INFO("%f %f %f", message.relative_angle, message.imu_angle, angle);
-        ROS_INFO("%f %f", linear_x.f, linear_y.f);
+        ROS_INFO("%f %f %f", linear_x.f, linear_y.f, omega.f);
         ros::spinOnce(); 
         rate.sleep();
     }
