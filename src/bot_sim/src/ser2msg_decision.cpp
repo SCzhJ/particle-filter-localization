@@ -92,9 +92,21 @@ void StatusCallback(const std_msgs::Bool::ConstPtr &msg)
     // printf("msg_received");
     // std::cout<<cmd_vel.linear.x<<' '<<cmd_vel.linear.y<<std::endl;
 }
-std::pair<double, double> getGoalType[4]={{-0.055942609906196594,0.009506076574325562},{-1.3484139442443848
-,1.6214642524719238},{1.3867688179016113,4.585798740386963},{1.732113003730774,3.1185054779052734}};
-double angles[4] = {0,0,0,0};
+std::pair<double, double> getGoalType[]={
+{8.215254783630371, 8.674027442932129},    //0
+{8.011299133300781, 25.099763870239258},   //1
+{5.136077880859375, 13.348814010620117},   //2
+{10.739795684814453, 20.710840225219727},  //3
+{2.661466598510742, 17.89205551147461},    //4
+{13.056159973144531,  15.860123634338379}, //5
+{4.178987979888916, 20.687192916870117},   //6
+{4.229683876037598, 11.059250831604004},   //7
+{11.635642051696777, 22.893033981323242},  //8
+{13.664833068847656, 11.683853149414062},  //9
+{14.618308067321777, 5.061775207519531},   //10
+{13.056159973144531,  15.860123634338379}  //11
+};
+double angles[2]={0.0, -35.0/180.0*3.14159265};
 int main(int argc, char** argv)
 {
     std::string node_name = "ser2msg_decision";
@@ -214,6 +226,7 @@ int main(int argc, char** argv)
     loc.header.frame_id = "map";
     loc.child_frame_id = virtual_frame;
 
+    int last_goal = -1, current_goal = -1;
     while(ros::ok()){
 
         // Read data from the serial port
@@ -232,104 +245,126 @@ int main(int argc, char** argv)
             while (message.readFromBuffer(buffer_recv));
             // message.printData();
         }
+        //Calculate virtual frame
+        {
+            q1.setRPY(0,0,-message.imu_angle);
+            transformRotbaseToVirtual.transform.rotation.x = q1.x();
+            transformRotbaseToVirtual.transform.rotation.y = q1.y();
+            transformRotbaseToVirtual.transform.rotation.z = q1.z();
+            transformRotbaseToVirtual.transform.rotation.w = q1.w();
+            transformRotbaseToVirtual.header.stamp = ros::Time::now();
+            // tfb.sendTransform(transformRotbaseToVirtual);
 
-        q1.setRPY(0,0,-message.imu_angle);
-        transformRotbaseToVirtual.transform.rotation.x = q1.x();
-        transformRotbaseToVirtual.transform.rotation.y = q1.y();
-        transformRotbaseToVirtual.transform.rotation.z = q1.z();
-        transformRotbaseToVirtual.transform.rotation.w = q1.w();
-        transformRotbaseToVirtual.header.stamp = ros::Time::now();
-        // tfb.sendTransform(transformRotbaseToVirtual);
+            q2.setRPY(0,0,-message.relative_angle);
+            transformGimbalToRotbase.transform.rotation.x = q2.x();
+            transformGimbalToRotbase.transform.rotation.y = q2.y();
+            transformGimbalToRotbase.transform.rotation.z = q2.z();
+            transformGimbalToRotbase.transform.rotation.w = q2.w();
+            transformGimbalToRotbase.header.stamp = ros::Time::now();
+            // tfb.sendTransform(transformGimbalToRotbase);
+            
 
-        q2.setRPY(0,0,-message.relative_angle);
-        transformGimbalToRotbase.transform.rotation.x = q2.x();
-        transformGimbalToRotbase.transform.rotation.y = q2.y();
-        transformGimbalToRotbase.transform.rotation.z = q2.z();
-        transformGimbalToRotbase.transform.rotation.w = q2.w();
-        transformGimbalToRotbase.header.stamp = ros::Time::now();
-        // tfb.sendTransform(transformGimbalToRotbase);
-
-        try{
-            transformMapToGimbal = tfBuffer.lookupTransform("map", "gimbal_frame",ros::Time(0),ros::Duration(5.0));
-        }
-        catch(tf2::TransformException &ex){
-            ROS_WARN("%s",ex.what());
-        }
-        tf2::fromMsg(transformMapToGimbal.transform, gimbalframe);
-        tf2::fromMsg(transformGimbalToRotbase.transform,rotbaseframe);
-        tf2::fromMsg(transformRotbaseToVirtual.transform,virtualframe);
-        // location = gimbalframe;
-        // // * rotbaseframe * virtualframe;
-        location = gimbalframe * rotbaseframe * virtualframe;
-        loc.transform = tf2::toMsg(location);
-        loc.header.stamp = ros::Time::now();
-        tfb.sendTransform(loc);
-        //send_goal
-        if(message.goal_type != 0xF1){
-            geometry_msgs::PointStamped clicked_point;
-            clicked_point.header.frame_id="map";
-            clicked_point.header.stamp=ros::Time::now();
-            if(message.goal_type != 0xF0){
-                clicked_point.point.x=getGoalType[message.goal_type].first;
-                clicked_point.point.y=getGoalType[message.goal_type].second;
-                clicked_point.point.z=0;
+            try{
+                transformMapToGimbal = tfBuffer.lookupTransform("map", "gimbal_frame",ros::Time(0),ros::Duration(5.0));
             }
-            else{
-                clicked_point.point.x=message.goal_x;
-                clicked_point.point.y=message.goal_y;
-                clicked_point.point.z=0;
+            catch(tf2::TransformException &ex){
+                ROS_WARN("%s",ex.what());
             }
-            // clicked_point_pub.publish(clicked_point);
-            ROS_INFO("%d",message.goal_type);
+            tf2::fromMsg(transformMapToGimbal.transform, gimbalframe);
+            tf2::fromMsg(transformGimbalToRotbase.transform,rotbaseframe);
+            tf2::fromMsg(transformRotbaseToVirtual.transform,virtualframe);
+            // location = gimbalframe;
+            // // * rotbaseframe * virtualframe;
+            location = gimbalframe * rotbaseframe * virtualframe;
+            loc.transform = tf2::toMsg(location);
+            loc.header.stamp = ros::Time::now();
+            tfb.sendTransform(loc);
+            
         }
-           // Write data to serial port
+        //send goal
+        {
+            if(message.goal_type != current_goal){
+                last_goal = current_goal;
+                current_goal = message.goal_type;
+            }
+            if(message.goal_type != 0x0C){
+                geometry_msgs::PointStamped clicked_point;
+                clicked_point.header.frame_id="map";
+                clicked_point.header.stamp=ros::Time::now();
+                if(message.goal_type != 0xF0){
+                    clicked_point.point.x=getGoalType[message.goal_type].first;
+                    clicked_point.point.y=getGoalType[message.goal_type].second;
+                    clicked_point.point.z=0;
+                }
+                else{
+                    clicked_point.point.x=message.goal_x;
+                    clicked_point.point.y=message.goal_y;
+                    clicked_point.point.z=0;
+                }
+                clicked_point_pub.publish(clicked_point);
+                ROS_INFO("goal_type: %d",message.goal_type);
+            }
+        }
+        // Write data to serial port
         // Linear velocities x
-        FloatToByte linear_x;
-        linear_x.f = cmd_vel.linear.x;
-        std::copy(std::begin(linear_x.bytes),std::end(linear_x.bytes),&buffer_send[1]);
+        {   
+            FloatToByte linear_x;
+            linear_x.f = cmd_vel.linear.x;
+            std::copy(std::begin(linear_x.bytes),std::end(linear_x.bytes),&buffer_send[1]);
+        }
         // Linear velocities y
-        FloatToByte linear_y;
-        linear_y.f = -cmd_vel.linear.y;
-        std::copy(std::begin(linear_y.bytes),std::end(linear_y.bytes),&buffer_send[5]);
+        {
+            FloatToByte linear_y;
+            linear_y.f = -cmd_vel.linear.y;
+            std::copy(std::begin(linear_y.bytes),std::end(linear_y.bytes),&buffer_send[5]);
+        }
         // Omega angle w
-        FloatToByte omega;
-        int index = 0;
-        if(message.goal_type != 0xF0 && message.goal_type != 0xF1)index = message.goal_type;
-        auto tf_rot_from_map_to_virtual = loc;
-        double y = sin(angles[index]);
-        tf_rot_from_map_to_virtual.transform.translation.x = 0;
-        tf_rot_from_map_to_virtual.transform.translation.y = 0;
-        tf_rot_from_map_to_virtual.transform.translation.z = 0;
-        geometry_msgs::PointStamped source_point;
-        source_point.header.frame_id = "virtual_frame";
-        source_point.header.stamp = ros::Time(0);
-        source_point.point.x = cos(angles[index]);
-        source_point.point.y = sin(angles[index]);
-        source_point.point.z = 0;
-        geometry_msgs::PointStamped target_point;
-        tf2::doTransform(source_point, target_point, tf_rot_from_map_to_virtual);
-        double rx = target_point.point.x;
-        double ry = target_point.point.y;
-        double angle = atan2(ry,rx);
-        omega.f = -angle;
-        std::copy(std::begin(omega.bytes),std::end(omega.bytes),&buffer_send[9]);
+        {
+            FloatToByte omega;
+            int index = 1;
+            if(current_goal == 2 || last_goal == 2){
+                index = 1;
+            }
+            auto tf_rot_from_map_to_virtual = loc;
+            tf_rot_from_map_to_virtual.transform.translation.x = 0;
+            tf_rot_from_map_to_virtual.transform.translation.y = 0;
+            tf_rot_from_map_to_virtual.transform.translation.z = 0;
+            geometry_msgs::PointStamped source_point;
+            source_point.header.frame_id = "virtual_frame";
+            source_point.header.stamp = ros::Time(0);
+            source_point.point.x = cos(angles[index]);
+            source_point.point.y = sin(angles[index]);
+            ROS_INFO("x: %lf y: %lf angle: %lf index: %d", source_point.point.x, source_point.point.y, angles[index], index);
+            source_point.point.z = 0;
+            geometry_msgs::PointStamped target_point;
+            tf2::doTransform(source_point, target_point, tf_rot_from_map_to_virtual);
+            double rx = target_point.point.x;
+            double ry = target_point.point.y;
+            double angle = atan2(ry,rx);
+            omega.f = -angle;
+            std::copy(std::begin(omega.bytes),std::end(omega.bytes),&buffer_send[9]);
+        }
         //received message
-        ByteToByte received_message;
-        received_message.f = message.receive_message;
-        std::copy(std::begin(received_message.bytes),std::end(received_message.bytes),&buffer_send[13]);
-        message.receive_message = 0;
+        {
+            ByteToByte received_message;
+            received_message.f = message.receive_message;
+            std::copy(std::begin(received_message.bytes),std::end(received_message.bytes),&buffer_send[13]);
+            message.receive_message = 0;
+        }
         //whether arrived
-        ByteToByte arrived;//0 move, 1 arrive
-        arrived.f = status;
-        status = 0;
-        std::copy(std::begin(arrived.bytes),std::end(arrived.bytes),&buffer_send[14]);
+        {
+            ByteToByte arrived;//0 move, 1 arrive
+            arrived.f = status;
+            status = 0;
+            std::copy(std::begin(arrived.bytes),std::end(arrived.bytes),&buffer_send[14]);
+        }
         // Write to the serial port
         size_t bytes_written = ser.write(buffer_send,write_length);
         if (bytes_written < write_length){
             ROS_ERROR("Failed to write all bytes to the serial port");
         }
-        ROS_INFO("%f %f %f", message.relative_angle, message.imu_angle, angle);
-        ROS_INFO("%f %f %f", linear_x.f, linear_y.f, omega.f);
+        ROS_INFO("relative angle: %f imu_angle: %f", message.relative_angle, message.imu_angle);
+        // ROS_INFO("%f %f %f", linear_x.f, linear_y.f, omega.f);
         ros::spinOnce(); 
         rate.sleep();
     }

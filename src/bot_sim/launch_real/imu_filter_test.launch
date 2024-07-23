@@ -1,7 +1,0 @@
-<launch>
-    <node pkg="bot_sim" type="imu_filter" name="imu_filter">
-        <param name="input_imu_topic" type="string" value="/livox/imu" />
-        <param name="output_imu_topic" type="string" value="/livox/imu_filtered" />
-        <param name="gravity" type="double" value="10" />
-    </node>
-</launch>

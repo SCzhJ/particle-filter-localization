@@ -8,8 +8,6 @@ add_compile_options(-std=c++14)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
-set(Glog_DIR "/opt/glog/lib/cmake/glog/")
-list(APPEND CMAKE_PREFIX_PATH "/opt/glog/lib/cmake/glog")
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -17,17 +15,11 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   visualization_msgs
-  urdf
-  xacro
   tf2_ros
   tf
   serial
-  message_generation
-  actionlib
-  actionlib_msgs
   livox_ros_driver2
   dynamic_reconfigure
-  Glog REQUIRED
 )
 
 ## System dependencies are found with CMake's conventions
@@ -63,32 +55,31 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  TwoPoints.msg
-  Angles.msg
-)
+# ## Generate messages in the 'msg' folder
+# add_message_files(
+#   FILES
+#   TwoPoints.msg
+#   Angles.msg
+# )
 
-## Generate services in the 'srv' folder
- add_service_files(
-   FILES
-   RRTStar.srv
-   Astar.srv
- )
+# ## Generate services in the 'srv' folder
+#  add_service_files(
+#    FILES
+#    RRTStar.srv
+#    Astar.srv
+#  )
 
-## Generate actions in the 'action' folder
- add_action_files(
-   FILES
-   NavAction.action
- )
+# ## Generate actions in the 'action' folder
+#  add_action_files(
+#    FILES
+#    NavAction.action
+#  )
 
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
    std_msgs
    geometry_msgs
-   actionlib_msgs
    visualization_msgs
  )
  generate_dynamic_reconfigure_options(
@@ -127,7 +118,7 @@ add_message_files(
 catkin_package(
  INCLUDE_DIRS include
 # LIBRARIES ${PROJECT_NAME}
-CATKIN_DEPENDS roscpp rospy std_msgs urdf xacro serial actionlib actionlib_msgs message_runtime dynamic_reconfigure
+CATKIN_DEPENDS roscpp rospy std_msgs serial message_runtime dynamic_reconfigure
 #  DEPENDS system_lib
 )
 
@@ -156,29 +147,29 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(scan_2_node src/scan_2_node.cpp)
+# add_executable(scan_2_node src/scan_2_node.cpp)
 add_executable(imu_filter src/imu_filter.cpp)
 add_executable(real_robot_transform src/real_robot_transform.cpp)
-add_executable(real_robot_transform_3d src/real_robot_transform_3d.cpp include/bot_sim/EKF.h)
-add_executable(cmd2ser src/cmd2ser.cpp)
-add_executable(ser2msg src/ser2msg.cpp)
+# add_executable(real_robot_transform_3d src/real_robot_transform_3d.cpp include/bot_sim/EKF.h)
+# add_executable(cmd2ser src/cmd2ser.cpp)
+# add_executable(ser2msg src/ser2msg.cpp)
 add_executable(ser2msg_decision src/ser2msg_decision.cpp)
-add_executable(wavefront src/wavefront.cpp)
-add_executable(test_transform src/test_transform.cpp)
-add_executable(lidar_filter src/lidar_filter.cpp)
+# add_executable(wavefront src/wavefront.cpp)
+# add_executable(test_transform src/test_transform.cpp)
+# add_executable(lidar_filter src/lidar_filter.cpp)
 add_executable(threeD_lidar_filter src/threeD_lidar_filter.cpp)
 add_executable(threeD_lidar_filter_pointcloud src/threeD_lidar_filter_pointcloud.cpp)
 add_executable(threeD_lidar_merge src/threeD_lidar_merge.cpp)
 add_executable(threeD_lidar_merge_pointcloud src/threeD_lidar_merge_pointcloud.cpp)
 add_executable(threeD_lidar_merge_pointcloud_test src/threeD_lidar_merge_pointcloud_test.cpp)
-add_executable(dbscan_bfs src/dbscan_bfs.cpp)
+# add_executable(dbscan_bfs src/dbscan_bfs.cpp)
 add_executable(dbscan_bfs_3D src/dbscan_bfs_3D.cpp)
-add_executable(threeD_lidar_test src/threeD_lidar_test.cpp)
-add_executable(ser2msg_write_only src/ser2msg_write_only.cpp)
-add_executable(transform_listener src/transform_listener.cpp)
+# add_executable(threeD_lidar_test src/threeD_lidar_test.cpp)
+# add_executable(ser2msg_write_only src/ser2msg_write_only.cpp)
+# add_executable(transform_listener src/transform_listener.cpp)
 add_executable(dstarlite src/dstarlite.cpp)
-add_executable(dstarlite_pointcloud src/dstarlite_pointcloud.cpp)
-add_executable(pc_vel_scaler src/pc_vel_scaler.cpp)
+# add_executable(dstarlite_pointcloud src/dstarlite_pointcloud.cpp)
+# add_executable(pc_vel_scaler src/pc_vel_scaler.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -188,38 +179,38 @@ add_executable(pc_vel_scaler src/pc_vel_scaler.cpp)
 
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(scan_2_node
-${catkin_LIBRARIES}
-)
+# target_link_libraries(scan_2_node
+# ${catkin_LIBRARIES}
+# )
 target_link_libraries(imu_filter
   ${catkin_LIBRARIES}
 )
 target_link_libraries(real_robot_transform
   ${catkin_LIBRARIES}
 )
-target_link_libraries(real_robot_transform_3d
-  ${catkin_LIBRARIES}
-  ${GLOG_LIBRARIES}
-  glog::glog
-)
-target_link_libraries(cmd2ser
-  ${catkin_LIBRARIES}
-)
-target_link_libraries(ser2msg
-  ${catkin_LIBRARIES}
-)
+# target_link_libraries(real_robot_transform_3d
+#   ${catkin_LIBRARIES}
+#   ${GLOG_LIBRARIES}
+#   glog::glog
+# )
+# target_link_libraries(cmd2ser
+#   ${catkin_LIBRARIES}
+# )
+# target_link_libraries(ser2msg
+#   ${catkin_LIBRARIES}
+# )
 target_link_libraries(ser2msg_decision
   ${catkin_LIBRARIES}
 )
-target_link_libraries(wavefront
-  ${catkin_LIBRARIES}
-)
-target_link_libraries(test_transform
-  ${catkin_LIBRARIES}
-)
-target_link_libraries(lidar_filter
-  ${catkin_LIBRARIES}
-)
+# target_link_libraries(wavefront
+#   ${catkin_LIBRARIES}
+# )
+# target_link_libraries(test_transform
+#   ${catkin_LIBRARIES}
+# )
+# target_link_libraries(lidar_filter
+#   ${catkin_LIBRARIES}
+# )
 target_link_libraries(threeD_lidar_filter
   ${catkin_LIBRARIES}
 )
@@ -235,37 +226,37 @@ target_link_libraries(threeD_lidar_merge_pointcloud
 target_link_libraries(threeD_lidar_merge_pointcloud_test
   ${catkin_LIBRARIES}
 )
-target_link_libraries(dbscan_bfs
-  ${catkin_LIBRARIES}
-)
+# target_link_libraries(dbscan_bfs
+#   ${catkin_LIBRARIES}
+# )
 target_link_libraries(dbscan_bfs_3D
   ${catkin_LIBRARIES}
 )
-target_link_libraries(threeD_lidar_test
-  ${catkin_LIBRARIES}
-)
-target_link_libraries(ser2msg_write_only
-  ${catkin_LIBRARIES}
-)
-target_link_libraries(transform_listener
-  ${catkin_LIBRARIES}
-)
+# target_link_libraries(threeD_lidar_test
+#   ${catkin_LIBRARIES}
+# )
+# target_link_libraries(ser2msg_write_only
+#   ${catkin_LIBRARIES}
+# )
+# target_link_libraries(transform_listener
+#   ${catkin_LIBRARIES}
+# )
 target_link_libraries(dstarlite
   ${catkin_LIBRARIES}
 )
-target_link_libraries(dstarlite_pointcloud
-  ${catkin_LIBRARIES}
-)
-target_link_libraries(pc_vel_scaler
-  ${catkin_LIBRARIES}
-)
+# target_link_libraries(dstarlite_pointcloud
+#   ${catkin_LIBRARIES}
+# )
+# target_link_libraries(pc_vel_scaler
+#   ${catkin_LIBRARIES}
+# )
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(real_robot_transform ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(threeD_lidar_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(ser2msg_write_only ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(threeD_lidar_test ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(ser2msg_write_only ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(dstarlite ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(dstarlite_pointcloud ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(dstarlite_pointcloud ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 #############
 ## Install ##
 #############3D_lidar_filteration

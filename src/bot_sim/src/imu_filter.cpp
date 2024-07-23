@@ -7,6 +7,7 @@ double gravity;
 void imuCallback(const sensor_msgs::Imu::ConstPtr& msg) {
     // 直接将接收到的消息发布到新的topic
     sensor_msgs::Imu imu_msg = *msg;
+    imu_msg.header.frame_id = "aft_mapped";
     imu_msg.linear_acceleration.z *= -gravity;
     imu_msg.linear_acceleration.x *= gravity; 
     imu_msg.linear_acceleration.y *= -gravity;
